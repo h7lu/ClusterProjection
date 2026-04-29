@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <TerrainDef ParentName="FloorBase">
+    <defName>CP_LauncherFloor</defName>
+    <label>launcher floor</label>
+    <description>Launch-qualified flooring used by cluster projection consoles.</description>
+    <texturePath>cluster_launch_ground</texturePath>
+    <costList>
+      <Steel>2</Steel>
+    </costList>
+    <researchPrerequisites>
+      <li>ClusterProjection</li>
+    </researchPrerequisites>
+    <designationCategory>Structure</designationCategory>
+  </TerrainDef>
+</Defs>

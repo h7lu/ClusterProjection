@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+  <CP_NotConnectedToConsole>Rail must connect to a cluster projection console or a valid rail chain.</CP_NotConnectedToConsole>
+  <CP_RailMustStayStraight>Auto assembly rails must stay straight and axis-aligned.</CP_RailMustStayStraight>
+  <CP_NoValidLaunchArea>No valid launch area found between orthogonal rails.</CP_NoValidLaunchArea>
+</LanguageData>

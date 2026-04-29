@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <ThingDef ParentName="BuildingBase">
+    <defName>CP_ClusterProjectionConsole</defName>
+    <label>cluster projection console</label>
+    <description>Main controller for defining launch areas, staging encapsulation, and launching projected clusters.</description>
+    <thingClass>ClusterProjection.Building_ClusterProjectionConsole</thingClass>
+    <graphicData>
+      <texPath>console</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1,1)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>PassThroughOnly</passability>
+    <pathCost>10</pathCost>
+    <costList>
+      <Steel>100</Steel>
+      <ComponentIndustrial>2</ComponentIndustrial>
+    </costList>
+    <researchPrerequisites>
+      <li>ClusterProjection</li>
+    </researchPrerequisites>
+    <designationCategory>Structure</designationCategory>
+    <comps>
+      <li Class="CompProperties_Refuelable">
+        <fuelCapacity>1000</fuelCapacity>
+        <fuelConsumptionRate>0</fuelConsumptionRate>
+        <fuelFilter>
+          <thingDefs>
+            <li>Chemfuel</li>
+          </thingDefs>
+        </fuelFilter>
+        <showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
+      </li>
+    </comps>
+  </ThingDef>
+
+  <ThingDef ParentName="BuildingBase">
+    <defName>CP_AutoAssemblyRail</defName>
+    <label>auto assembly rail</label>
+    <description>Axis-aligned rail used to define the launch rectangle with a console.</description>
+    <thingClass>ClusterProjection.Building_AutoAssemblyRail</thingClass>
+    <rotatable>true</rotatable>
+    <placeWorkers>
+      <li>ClusterProjection.PlaceWorker_AutoAssemblyRail</li>
+    </placeWorkers>
+    <graphicData>
+      <texPath>AncientFence_Atlas</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1,1)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <altitudeLayer>Building</altitudeLayer>
+    <fillPercent>0.02</fillPercent>
+    <passability>PassThroughOnly</passability>
+    <pathCost>4</pathCost>
+    <castEdgeShadows>false</castEdgeShadows>
+    <costList>
+      <Steel>15</Steel>
+    </costList>
+    <researchPrerequisites>
+      <li>ClusterProjection</li>
+    </researchPrerequisites>
+    <designationCategory>Structure</designationCategory>
+  </ThingDef>
+
+  <ThingDef ParentName="BuildingBase">
+    <defName>CP_InfantryCapsule</defName>
+    <label>infantry capsule</label>
+    <description>A capsule that can hold pawns up to a total body size of 5 for cluster projection transport.</description>
+    <thingClass>ClusterProjection.Building_InfantryCapsule</thingClass>
+    <graphicData>
+      <texPath>MechCapsule</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1,1)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>Impassable</passability>
+    <pathCost>50</pathCost>
+    <costList>
+      <Steel>50</Steel>
+      <ComponentIndustrial>1</ComponentIndustrial>
+    </costList>
+    <researchPrerequisites>
+      <li>ClusterProjection</li>
+    </researchPrerequisites>
+    <designationCategory>Structure</designationCategory>
+  </ThingDef>
+</Defs>
