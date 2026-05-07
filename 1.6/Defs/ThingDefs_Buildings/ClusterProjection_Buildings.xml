@@ -12,6 +12,7 @@
     </graphicData>
     <size>(1,1)</size>
     <altitudeLayer>Building</altitudeLayer>
+    <tickerType>Normal</tickerType>
     <passability>PassThroughOnly</passability>
     <pathCost>10</pathCost>
     <costList>
@@ -77,6 +78,7 @@
     </graphicData>
     <size>(1,1)</size>
     <altitudeLayer>Building</altitudeLayer>
+    <fillPercent>1</fillPercent>
     <passability>Impassable</passability>
     <pathCost>50</pathCost>
     <costList>
