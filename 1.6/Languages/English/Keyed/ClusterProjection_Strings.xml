@@ -3,4 +3,22 @@
   <CP_NotConnectedToConsole>Rail must connect to a cluster projection console or a valid rail chain.</CP_NotConnectedToConsole>
   <CP_RailMustStayStraight>Auto assembly rails must stay straight and axis-aligned.</CP_RailMustStayStraight>
   <CP_NoValidLaunchArea>No valid launch area found between orthogonal rails.</CP_NoValidLaunchArea>
+  <CP_Steel>Steel</CP_Steel>
+  <CP_LoadSteel>Load steel</CP_LoadSteel>
+  <CP_LoadSteelDesc>Load available steel into the cluster projection console.</CP_LoadSteelDesc>
+  <CP_EjectSteel>Eject steel</CP_EjectSteel>
+  <CP_EjectSteelDesc>Eject all stored steel onto the ground.</CP_EjectSteelDesc>
+  <CP_EjectFuel>Eject fuel</CP_EjectFuel>
+  <CP_EjectFuelDesc>Eject all stored chemfuel onto the ground.</CP_EjectFuelDesc>
+  <CP_AssemblyAndLaunch>Assembly</CP_AssemblyAndLaunch>
+  <CP_AssemblyAndLaunchDesc>Assemble all launchable buildings in the launch area into cluster pods.</CP_AssemblyAndLaunchDesc>
+  <CP_NoLaunchableBuildings>No launchable buildings found in the launch area.</CP_NoLaunchableBuildings>
+  <CP_NotEnoughSteel>Need {0} steel for assembly. Stored: {1}.</CP_NotEnoughSteel>
+  <CP_NotEnoughFuel>Need {0} chemfuel to travel at least 1 world tile. Stored: {1}.</CP_NotEnoughFuel>
+  <CP_AssemblyStarted>Cluster assembly started for {0} buildings.</CP_AssemblyStarted>
+  <CP_AssemblyComplete>Cluster assembly complete.</CP_AssemblyComplete>
+  <CP_NoSteelFound>No available steel found.</CP_NoSteelFound>
+  <CP_LoadedSteel>Loaded {0} steel.</CP_LoadedSteel>
+  <CP_ClusterPodEmpty>Contains no building.</CP_ClusterPodEmpty>
+  <CP_ClusterPodContains>Contains: {0}</CP_ClusterPodContains>
 </LanguageData>

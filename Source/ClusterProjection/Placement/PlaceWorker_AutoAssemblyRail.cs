@@ -14,24 +14,34 @@ public class PlaceWorker_AutoAssemblyRail : PlaceWorker
         {
             var c = loc + dir;
             if (!c.InBounds(map))
+                continue;
+
+            // The direction of the connection must align with the new rail's axis.
+            // E/W neighbours → the new rail extends horizontally; N/S neighbours → vertically.
+            bool connectionIsHorizontal = (dir.x != 0);
+            if (connectionIsHorizontal != axisIsHorizontal)
             {
+                // A neighbour exists in a perpendicular direction – check if it's a rail or console
+                // before rejecting, so empty cells don't trigger the rule.
+                var thingInDir = c.GetFirstThing(map, CP_ThingDefOf.CP_AutoAssemblyRail)
+                              ?? (Thing)c.GetFirstThing(map, CP_ThingDefOf.CP_ClusterProjectionConsole);
+                if (thingInDir != null)
+                    return "CP_RailMustStayStraight".Translate();
                 continue;
             }
 
             var rail = c.GetFirstThing(map, CP_ThingDefOf.CP_AutoAssemblyRail) as Building_AutoAssemblyRail;
             if (rail != null)
             {
-                var neighborAxisIsHorizontal = IsHorizontalAxis(rail.Rotation);
-                if (neighborAxisIsHorizontal != axisIsHorizontal)
-                {
+                // The existing rail's own axis must also match (prevents connecting end-on into a perpendicular rail).
+                if (IsHorizontalAxis(rail.Rotation) != axisIsHorizontal)
                     return "CP_RailMustStayStraight".Translate();
-                }
 
                 hasValidConnection = true;
                 continue;
             }
 
-            var console = c.GetFirstThing(map, CP_ThingDefOf.CP_ClusterProjectionConsole) as Building_ClusterProjectionConsole;
+            var console = c.GetFirstThing(map, CP_ThingDefOf.CP_ClusterProjectionConsole);
             if (console != null)
             {
                 hasValidConnection = true;
@@ -39,9 +49,7 @@ public class PlaceWorker_AutoAssemblyRail : PlaceWorker
         }
 
         if (!hasValidConnection)
-        {
             return "CP_NotConnectedToConsole".Translate();
-        }
 
         return true;
     }

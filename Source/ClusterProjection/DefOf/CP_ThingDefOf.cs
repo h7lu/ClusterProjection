@@ -9,6 +9,7 @@ public static class CP_ThingDefOf
     public static ThingDef CP_ClusterProjectionConsole;
     public static ThingDef CP_AutoAssemblyRail;
     public static ThingDef CP_InfantryCapsule;
+    public static ThingDef CP_ClusterPod;
 
     static CP_ThingDefOf()
     {

@@ -1,0 +1,12 @@
+using Verse;
+
+namespace ClusterProjection;
+
+public class CP_AssemblyProperties : DefModExtension
+{
+    public int steelCapacity = 500;
+    public float baseSteelConsumption = 30f;
+    public float baseFuelConsumption = 1f;
+    public float assemblyHeadSpeedCellsPerTick = 0.08f;
+    public int baseAssemblyTicks = 60;
+}

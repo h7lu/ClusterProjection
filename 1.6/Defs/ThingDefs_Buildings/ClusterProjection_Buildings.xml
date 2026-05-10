@@ -8,9 +8,10 @@
     <graphicData>
       <texPath>console</texPath>
       <graphicClass>Graphic_Single</graphicClass>
-      <drawSize>(1,1)</drawSize>
+      <drawSize>(4,4)</drawSize>
     </graphicData>
-    <size>(1,1)</size>
+    <drawerType>MapMeshAndRealTime</drawerType>
+    <size>(3,3)</size>
     <altitudeLayer>Building</altitudeLayer>
     <tickerType>Normal</tickerType>
     <passability>PassThroughOnly</passability>
@@ -27,6 +28,10 @@
       <li Class="CompProperties_Refuelable">
         <fuelCapacity>1000</fuelCapacity>
         <fuelConsumptionRate>0</fuelConsumptionRate>
+        <showFuelGizmo>true</showFuelGizmo>
+        <targetFuelLevelConfigurable>true</targetFuelLevelConfigurable>
+        <initialConfigurableTargetFuelLevel>1000</initialConfigurableTargetFuelLevel>
+        <canEjectFuel>true</canEjectFuel>
         <fuelFilter>
           <thingDefs>
             <li>Chemfuel</li>
@@ -34,7 +39,31 @@
         </fuelFilter>
         <showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
       </li>
+      <li Class="CompProperties_Refuelable">
+        <fuelCapacity>1000</fuelCapacity>
+        <fuelConsumptionRate>0</fuelConsumptionRate>
+        <showFuelGizmo>true</showFuelGizmo>
+        <targetFuelLevelConfigurable>true</targetFuelLevelConfigurable>
+        <initialConfigurableTargetFuelLevel>1000</initialConfigurableTargetFuelLevel>
+        <canEjectFuel>true</canEjectFuel>
+        <fuelLabel>CP_Steel</fuelLabel>
+        <fuelGizmoLabel>CP_Steel</fuelGizmoLabel>
+        <fuelFilter>
+          <thingDefs>
+            <li>Steel</li>
+          </thingDefs>
+        </fuelFilter>
+        <showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
+      </li>
     </comps>
+    <modExtensions>
+      <li Class="ClusterProjection.CP_AssemblyProperties">
+        <baseSteelConsumption>10</baseSteelConsumption>
+        <baseFuelConsumption>0.5</baseFuelConsumption>
+        <assemblyHeadSpeedCellsPerTick>0.2</assemblyHeadSpeedCellsPerTick>
+        <baseAssemblyTicks>20</baseAssemblyTicks>
+      </li>
+    </modExtensions>
   </ThingDef>
 
   <ThingDef ParentName="BuildingBase">
@@ -47,8 +76,8 @@
       <li>ClusterProjection.PlaceWorker_AutoAssemblyRail</li>
     </placeWorkers>
     <graphicData>
-      <texPath>AncientFence_Atlas</texPath>
-      <graphicClass>Graphic_Single</graphicClass>
+      <texPath>Rail/assembly_rail</texPath>
+      <graphicClass>Graphic_Multi</graphicClass>
       <drawSize>(1,1)</drawSize>
     </graphicData>
     <size>(1,1)</size>
@@ -74,7 +103,7 @@
     <graphicData>
       <texPath>MechCapsule</texPath>
       <graphicClass>Graphic_Single</graphicClass>
-      <drawSize>(1,1)</drawSize>
+      <drawSize>(0.8,1.6)</drawSize>
     </graphicData>
     <size>(1,1)</size>
     <altitudeLayer>Building</altitudeLayer>
@@ -89,5 +118,23 @@
       <li>ClusterProjection</li>
     </researchPrerequisites>
     <designationCategory>Structure</designationCategory>
+  </ThingDef>
+
+  <ThingDef ParentName="BuildingBase">
+    <defName>CP_ClusterPod</defName>
+    <label>cluster pod</label>
+    <description>A sealed projected cluster pod containing an assembled building.</description>
+    <thingClass>ClusterProjection.Building_ClusterPod</thingClass>
+    <graphicData>
+      <texPath>Things/Special/DropPod</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(2,2)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <altitudeLayer>BuildingOnTop</altitudeLayer>
+    <fillPercent>1</fillPercent>
+    <passability>PassThroughOnly</passability>
+    <selectable>true</selectable>
+    <tickerType>Never</tickerType>
   </ThingDef>
 </Defs>
