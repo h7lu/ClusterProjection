@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <JobDef>
+    <defName>CP_RefuelSteelConsole</defName>
+    <driverClass>ClusterProjection.JobDriver_RefuelSteelConsole</driverClass>
+    <reportString>refueling TargetA.</reportString>
+    <suspendable>false</suspendable>
+    <allowOpportunisticPrefix>true</allowOpportunisticPrefix>
+  </JobDef>
+
+</Defs>

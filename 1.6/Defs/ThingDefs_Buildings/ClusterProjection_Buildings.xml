@@ -1,6 +1,64 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Defs>
   <ThingDef ParentName="BuildingBase">
+    <defName>CP_ProjectionBeacon</defName>
+    <label>projection beacon</label>
+    <description>A launchable projection beacon built beside a launcher like a transport pod. On landing it establishes temporary map presence, keeps the map visible for a limited time, and then self-destructs.</description>
+    <thingClass>ClusterProjection.Building_ProjectionBeacon</thingClass>
+    <graphicData>
+      <texPath>DropBeacon</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1.2,1.2)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <rotatable>false</rotatable>
+    <tickerType>Normal</tickerType>
+    <altitudeLayer>BuildingOnTop</altitudeLayer>
+    <passability>PassThroughOnly</passability>
+    <fillPercent>0.5</fillPercent>
+    <designationCategory>Misc</designationCategory>
+    <uiOrder>2201</uiOrder>
+    <terrainAffordanceNeeded>Medium</terrainAffordanceNeeded>
+    <statBases>
+      <MaxHitPoints>250</MaxHitPoints>
+      <WorkToBuild>1600</WorkToBuild>
+      <MarketValue>110</MarketValue>
+      <Flammability>0.5</Flammability>
+    </statBases>
+    <costList>
+      <Steel>40</Steel>
+      <ComponentIndustrial>1</ComponentIndustrial>
+    </costList>
+    <comps>
+      <li Class="CompProperties_Transporter">
+        <compClass>ClusterProjection.CP_CompBeaconTransporter</compClass>
+        <restEffectiveness>0.8</restEffectiveness>
+        <canChangeAssignedThingsAfterStarting>false</canChangeAssignedThingsAfterStarting>
+        <max1PerGroup>true</max1PerGroup>
+      </li>
+      <li Class="CompProperties_Launchable_TransportPod">
+        <compClass>ClusterProjection.CP_CompLaunchableBeacon</compClass>
+        <skyfallerLeaving>DropPodLeaving</skyfallerLeaving>
+      </li>
+    </comps>
+    <placeWorkers>
+      <li>PlaceWorker_NeedsFuelingPort</li>
+      <li>PlaceWorker_NotUnderRoof</li>
+    </placeWorkers>
+    <researchPrerequisites>
+      <li>TransportPod</li>
+      <li>ClusterProjection</li>
+    </researchPrerequisites>
+    <constructionSkillPrerequisite>6</constructionSkillPrerequisite>
+    <uiIconScale>0.65</uiIconScale>
+    <modExtensions>
+      <li Class="ClusterProjection.CP_ProjectionBeaconProperties">
+        <mapHoldTicks>60000</mapHoldTicks>
+      </li>
+    </modExtensions>
+  </ThingDef>
+
+  <ThingDef ParentName="BuildingBase">
     <defName>CP_ClusterProjectionConsole</defName>
     <label>cluster projection console</label>
     <description>Main controller for defining launch areas, staging encapsulation, and launching projected clusters.</description>
@@ -23,9 +81,10 @@
     <researchPrerequisites>
       <li>ClusterProjection</li>
     </researchPrerequisites>
-    <designationCategory>Structure</designationCategory>
+    <designationCategory>Misc</designationCategory>
     <comps>
       <li Class="CompProperties_Refuelable">
+        <compClass>ClusterProjection.CP_CompRefuelable</compClass>
         <fuelCapacity>1000</fuelCapacity>
         <fuelConsumptionRate>0</fuelConsumptionRate>
         <showFuelGizmo>true</showFuelGizmo>
@@ -40,13 +99,14 @@
         <showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
       </li>
       <li Class="CompProperties_Refuelable">
+        <compClass>ClusterProjection.CP_CompRefuelable</compClass>
         <fuelCapacity>1000</fuelCapacity>
         <fuelConsumptionRate>0</fuelConsumptionRate>
         <showFuelGizmo>true</showFuelGizmo>
         <targetFuelLevelConfigurable>true</targetFuelLevelConfigurable>
         <initialConfigurableTargetFuelLevel>1000</initialConfigurableTargetFuelLevel>
         <canEjectFuel>true</canEjectFuel>
-        <fuelLabel>CP_Steel</fuelLabel>
+        <fuelLabel>Steel</fuelLabel>
         <fuelGizmoLabel>CP_Steel</fuelGizmoLabel>
         <fuelFilter>
           <thingDefs>
@@ -55,15 +115,106 @@
         </fuelFilter>
         <showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
       </li>
+      <li Class="CompProperties_AffectedByFacilities">
+        <linkableFacilities>
+          <li>CP_OilExpansionTank</li>
+          <li>CP_SteelExpansionTank</li>
+        </linkableFacilities>
+      </li>
     </comps>
     <modExtensions>
       <li Class="ClusterProjection.CP_AssemblyProperties">
         <baseSteelConsumption>10</baseSteelConsumption>
-        <baseFuelConsumption>0.5</baseFuelConsumption>
+        <baseFuelConsumption>0.3</baseFuelConsumption>
         <assemblyHeadSpeedCellsPerTick>0.2</assemblyHeadSpeedCellsPerTick>
         <baseAssemblyTicks>20</baseAssemblyTicks>
+        <launchCountdownTicks>180</launchCountdownTicks>
+        <maxLaunchRandomDelayTicks>30</maxLaunchRandomDelayTicks>
       </li>
     </modExtensions>
+    <!-- <placeWorkers>
+      <li>PlaceWorker_ShowFacilitiesConnections</li>
+    </placeWorkers> -->
+  </ThingDef>
+
+  <ThingDef ParentName="BuildingBase">
+    <defName>CP_OilExpansionTank</defName>
+    <label>oil expansion tank</label>
+    <description>Expands the linked cluster projection console's chemfuel capacity while connected within range.</description>
+    <thingClass>ClusterProjection.Building_ClusterExpansionTank</thingClass>
+    <graphicData>
+      <texPath>oil_expansion_tank</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1.95,3.9)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <altitudeLayer>Building</altitudeLayer>
+    <fillPercent>1</fillPercent>
+    <passability>Impassable</passability>
+    <pathCost>25</pathCost>
+    <costList>
+      <Steel>40</Steel>
+      <ComponentIndustrial>1</ComponentIndustrial>
+    </costList>
+    <researchPrerequisites>
+      <li>ClusterProjection</li>
+    </researchPrerequisites>
+    <designationCategory>Misc</designationCategory>
+    <comps>
+      <li Class="CompProperties_Facility">
+        <maxSimultaneous>1</maxSimultaneous>
+      </li>
+    </comps>
+    <modExtensions>
+      <li Class="ClusterProjection.CP_ClusterCapacityExtension">
+        <fuelDef>Chemfuel</fuelDef>
+        <capacityBonus>500</capacityBonus>
+        <connectionRadius>4.9</connectionRadius>
+      </li>
+    </modExtensions>
+    <!-- <placeWorkers>
+      <li>PlaceWorker_ShowFacilitiesConnections</li>
+    </placeWorkers> -->
+  </ThingDef>
+
+  <ThingDef ParentName="BuildingBase">
+    <defName>CP_SteelExpansionTank</defName>
+    <label>steel expansion tank</label>
+    <description>Expands the linked cluster projection console's steel capacity while connected within range.</description>
+    <thingClass>ClusterProjection.Building_ClusterExpansionTank</thingClass>
+    <graphicData>
+      <texPath>steel_expansion_tank</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1.95,3.9)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <altitudeLayer>Building</altitudeLayer>
+    <fillPercent>1</fillPercent>
+    <passability>Impassable</passability>
+    <pathCost>25</pathCost>
+    <costList>
+      <Steel>40</Steel>
+      <ComponentIndustrial>1</ComponentIndustrial>
+    </costList>
+    <researchPrerequisites>
+      <li>ClusterProjection</li>
+    </researchPrerequisites>
+    <designationCategory>Misc</designationCategory>
+    <comps>
+      <li Class="CompProperties_Facility">
+        <maxSimultaneous>1</maxSimultaneous>
+      </li>
+    </comps>
+    <modExtensions>
+      <li Class="ClusterProjection.CP_ClusterCapacityExtension">
+        <fuelDef>Steel</fuelDef>
+        <capacityBonus>500</capacityBonus>
+        <connectionRadius>4.9</connectionRadius>
+      </li>
+    </modExtensions>
+    <!-- <placeWorkers>
+      <li>PlaceWorker_ShowFacilitiesConnections</li>
+    </placeWorkers> -->
   </ThingDef>
 
   <ThingDef ParentName="BuildingBase">
@@ -92,18 +243,18 @@
     <researchPrerequisites>
       <li>ClusterProjection</li>
     </researchPrerequisites>
-    <designationCategory>Structure</designationCategory>
+    <designationCategory>Misc</designationCategory>
   </ThingDef>
 
   <ThingDef ParentName="BuildingBase">
     <defName>CP_InfantryCapsule</defName>
     <label>infantry capsule</label>
-    <description>A capsule that can hold pawns up to a total body size of 5 for cluster projection transport.</description>
+    <description>A pawn-only transport capsule that uses vanilla-style mass-limited loading and unloading behavior.</description>
     <thingClass>ClusterProjection.Building_InfantryCapsule</thingClass>
     <graphicData>
-      <texPath>MechCapsule</texPath>
+      <texPath>Infantry_capsule</texPath>
       <graphicClass>Graphic_Single</graphicClass>
-      <drawSize>(0.8,1.6)</drawSize>
+      <drawSize>(1.2,3.6)</drawSize>
     </graphicData>
     <size>(1,1)</size>
     <altitudeLayer>Building</altitudeLayer>
@@ -117,7 +268,17 @@
     <researchPrerequisites>
       <li>ClusterProjection</li>
     </researchPrerequisites>
-    <designationCategory>Structure</designationCategory>
+    <designationCategory>Misc</designationCategory>
+    <comps>
+      <li Class="CompProperties_Transporter">
+        <compClass>ClusterProjection.CP_CompTransporter</compClass>
+        <massCapacity>150</massCapacity>
+        <max1PerGroup>true</max1PerGroup>
+        <canChangeAssignedThingsAfterStarting>true</canChangeAssignedThingsAfterStarting>
+        <showOverallStats>true</showOverallStats>
+        <showMassInInspectString>true</showMassInInspectString>
+      </li>
+    </comps>
   </ThingDef>
 
   <ThingDef ParentName="BuildingBase">
@@ -135,6 +296,6 @@
     <fillPercent>1</fillPercent>
     <passability>PassThroughOnly</passability>
     <selectable>true</selectable>
-    <tickerType>Never</tickerType>
+    <tickerType>Normal</tickerType>
   </ThingDef>
 </Defs>

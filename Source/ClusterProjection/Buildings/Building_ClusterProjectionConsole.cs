@@ -1,5 +1,7 @@
 using ClusterProjection.DefOfs;
 using RimWorld;
+using RimWorld.Planet;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -9,32 +11,94 @@ namespace ClusterProjection;
 
 public class Building_ClusterProjectionConsole : Building
 {
+    private sealed class LinkedTankState
+    {
+        public int ThingId;
+        public ThingDef FuelDef;
+        public float CapacityBonus;
+        public IntVec3 Position;
+    }
+
+    private sealed class PendingPodLaunch
+    {
+        public Building_ClusterPod Pod;
+        public int DelayTicks;
+        public IntVec3 LandingOffset;
+    }
+
+    private sealed class LaunchPreviewHolder : IThingHolder
+    {
+        private readonly ThingOwner heldThings;
+
+        public IThingHolder ParentHolder => null;
+
+        public LaunchPreviewHolder(ThingOwner heldThings)
+        {
+            this.heldThings = heldThings;
+        }
+
+        public ThingOwner GetDirectlyHeldThings()
+        {
+            return heldThings;
+        }
+
+        public void GetChildHolders(List<IThingHolder> outChildren)
+        {
+            ThingOwnerUtility.AppendThingHoldersFromThings(outChildren, heldThings);
+        }
+    }
+
     private static readonly Color AreaColor = new Color(0f, 1f, 1f, 0.35f);
     private static readonly Color EdgeColor = new Color(0f, 1f, 1f, 1f);
     private static readonly Color LaunchableBuildingColor = new Color(0.15f, 1f, 0.15f, 0.75f);
     private static readonly Color UnlaunchableBuildingColor = new Color(1f, 0.2f, 0.2f, 0.75f);
+    private static readonly Color LandingGhostColor = new Color(0.8f, 0.8f, 0.8f, 0.14f);
+    private static readonly Color LandingGhostEdgeColor = new Color(0.8f, 0.8f, 0.8f, 0.5f);
 
     private bool assemblyActive;
     private bool assemblyReturning;
     private int currentAssemblyIndex;
     private int assemblyStayTicksLeft;
     private Vector3 assemblyHeadPosition;
+    private float assemblyRailHorizontalZ; // world-space z of the E/W rail
+    private float assemblyRailVerticalX;   // world-space x of the N/S rail
+    private int launchCountdownTicksLeft;
+    private int launchGroupID = -1;
+    private PlanetTile launchDestinationTile;
+    private TransportersArrivalAction launchArrivalAction;
     private List<Building> assemblyTargets = new();
+    private List<PendingPodLaunch> pendingPodLaunches = new();
+    private Dictionary<int, LinkedTankState> linkedTankStates = new();
     private Effecter assemblyEffecter;
     private Material assemblyHeadMaterial;
 
     private CP_AssemblyProperties AssemblyProps => def.GetModExtension<CP_AssemblyProperties>() ?? new CP_AssemblyProperties();
 
-    private CompRefuelable FuelComp => GetRefuelableCompFor(ThingDefOf.Chemfuel);
+    private CP_CompRefuelable FuelComp => GetRefuelableCompFor(ThingDefOf.Chemfuel);
 
-    private CompRefuelable SteelComp => GetRefuelableCompFor(ThingDefOf.Steel);
+    private CP_CompRefuelable SteelComp => GetRefuelableCompFor(ThingDefOf.Steel);
 
-    private CompRefuelable GetRefuelableCompFor(ThingDef fuelDef)
+    public CP_CompRefuelable SteelStorageComp => SteelComp;
+
+    private CP_CompRefuelable GetRefuelableCompFor(ThingDef fuelDef)
     {
-        return GetComps<CompRefuelable>().FirstOrDefault(c => c?.Props?.fuelFilter != null && c.Props.fuelFilter.Allows(fuelDef));
+        return GetComps<CP_CompRefuelable>().FirstOrDefault(c => c?.Props?.fuelFilter != null && c.Props.fuelFilter.Allows(fuelDef));
     }
 
     private Material AssemblyHeadMaterial => assemblyHeadMaterial ??= MaterialPool.MatFrom("assembly_head", ShaderDatabase.Transparent);
+
+    private Material RodHorizontalMaterial => MaterialPool.MatFrom("Rail/rod_horizontal", ShaderDatabase.Transparent);
+    private Material RodVerticalMaterial => MaterialPool.MatFrom("Rail/rod_vertical", ShaderDatabase.Transparent);
+    private Material AttacherHorizontalMaterial => MaterialPool.MatFrom("Rail/rail_attacher_vertical", ShaderDatabase.Transparent);
+    private Material AttacherVerticalMaterial => MaterialPool.MatFrom("Rail/rail_attacher_horizontal", ShaderDatabase.Transparent);
+
+    private bool LaunchActive => launchCountdownTicksLeft > 0 || pendingPodLaunches.Count > 0;
+
+    public override void SpawnSetup(Map map, bool respawningAfterLoad)
+    {
+        base.SpawnSetup(map, respawningAfterLoad);
+        UpdateLinkedTankCapacities();
+    }
 
     public override IEnumerable<Gizmo> GetGizmos()
     {
@@ -82,19 +146,39 @@ public class Building_ClusterProjectionConsole : Building
             icon = CP_ThingDefOf.CP_ClusterPod.uiIcon,
             action = TryStartAssemblyAndLaunch
         };
-        if (assemblyActive)
+        if (assemblyActive || LaunchActive)
             assemble.Disable("Busy".Translate());
         yield return assemble;
+
+        var launch = new Command_Action
+        {
+            defaultLabel = "CP_LaunchCluster".Translate(),
+            defaultDesc = "CP_LaunchClusterDesc".Translate(),
+            icon = CompLaunchable.LaunchCommandTex,
+            action = StartChoosingLaunchDestination
+        };
+
+        var launchDisableReason = GetLaunchDisabledReason();
+        if (!launchDisableReason.NullOrEmpty())
+            launch.Disable(launchDisableReason);
+        yield return launch;
     }
 
     public override void ExposeData()
     {
         base.ExposeData();
+        Scribe_Collections.Look(ref linkedTankStates, "linkedTankStates", LookMode.Value, LookMode.Deep);
         if (Scribe.mode == LoadSaveMode.PostLoadInit)
         {
             assemblyActive = false;
             assemblyReturning = false;
+            launchCountdownTicksLeft = 0;
+            launchGroupID = -1;
+            launchDestinationTile = PlanetTile.Invalid;
+            launchArrivalAction = null;
             assemblyTargets = new List<Building>();
+            pendingPodLaunches = new List<PendingPodLaunch>();
+            linkedTankStates ??= new Dictionary<int, LinkedTankState>();
             assemblyEffecter = null;
         }
     }
@@ -102,8 +186,148 @@ public class Building_ClusterProjectionConsole : Building
     protected override void Tick()
     {
         base.Tick();
+        UpdateLinkedTankCapacities();
         if (assemblyActive)
             TickAssembly();
+        if (LaunchActive)
+            TickLaunch();
+    }
+
+    private void UpdateLinkedTankCapacities()
+    {
+        var currentStates = GetCurrentLinkedTankStates();
+        UpdateLinkedTankCapacity(ThingDefOf.Chemfuel, FuelComp, currentStates);
+        UpdateLinkedTankCapacity(ThingDefOf.Steel, SteelComp, currentStates);
+        linkedTankStates = currentStates;
+    }
+
+    private void UpdateLinkedTankCapacity(ThingDef fuelDef, CP_CompRefuelable comp, Dictionary<int, LinkedTankState> currentStates)
+    {
+        if (comp == null)
+            return;
+
+        var newCapacity = comp.BaseFuelCapacity;
+        foreach (var state in currentStates.Values)
+        {
+            if (state.FuelDef == fuelDef)
+                newCapacity += state.CapacityBonus;
+        }
+
+        comp.SetCapacity(newCapacity);
+
+        var overflow = comp.ClampFuelToCapacity();
+        if (overflow <= 0f)
+            return;
+
+        var removedStates = linkedTankStates.Values
+            .Where(state => state.FuelDef == fuelDef && !currentStates.ContainsKey(state.ThingId))
+            .OrderBy(state => state.ThingId)
+            .ToList();
+
+        DropOverflowAtRemovedTanks(fuelDef, overflow, removedStates);
+    }
+
+    private void DropOverflowAtRemovedTanks(ThingDef fuelDef, float overflow, List<LinkedTankState> removedStates)
+    {
+        if (!Spawned || Map == null || overflow <= 0f || fuelDef == null)
+            return;
+
+        var remainingOverflow = Mathf.FloorToInt(overflow);
+        if (remainingOverflow <= 0)
+            return;
+
+        if (removedStates.Count == 0)
+        {
+            DropResourceNear(Position, fuelDef, remainingOverflow);
+            return;
+        }
+
+        var remainingBonus = removedStates.Sum(state => state.CapacityBonus);
+        for (var i = 0; i < removedStates.Count && remainingOverflow > 0; i++)
+        {
+            var removedState = removedStates[i];
+            int amountToDrop;
+            if (i == removedStates.Count - 1 || remainingBonus <= 0f)
+            {
+                amountToDrop = remainingOverflow;
+            }
+            else
+            {
+                amountToDrop = Mathf.Min(remainingOverflow, Mathf.RoundToInt(overflow * (removedState.CapacityBonus / remainingBonus)));
+                if (amountToDrop <= 0)
+                    amountToDrop = Mathf.Min(remainingOverflow, 1);
+            }
+
+            DropResourceNear(removedState.Position, fuelDef, amountToDrop);
+            remainingOverflow -= amountToDrop;
+            remainingBonus -= removedState.CapacityBonus;
+        }
+    }
+
+    private void DropResourceNear(IntVec3 position, ThingDef fuelDef, int amount)
+    {
+        while (amount > 0)
+        {
+            var thing = ThingMaker.MakeThing(fuelDef);
+            thing.stackCount = Mathf.Min(amount, fuelDef.stackLimit);
+            amount -= thing.stackCount;
+            GenPlace.TryPlaceThing(thing, position, Map, ThingPlaceMode.Near);
+            thing.SetForbidden(true, false);
+        }
+    }
+
+    private Dictionary<int, LinkedTankState> GetCurrentLinkedTankStates()
+    {
+        var states = new Dictionary<int, LinkedTankState>();
+        if (!Spawned || Map == null)
+            return states;
+
+        foreach (var thing in GenRadial.RadialDistinctThingsAround(Position, Map, 4.9f, true))
+        {
+            if (thing is not Building_ClusterExpansionTank tank || tank.GetLinkedConsole() != this)
+                continue;
+
+            states[tank.thingIDNumber] = new LinkedTankState
+            {
+                ThingId = tank.thingIDNumber,
+                FuelDef = tank.FuelDef,
+                CapacityBonus = tank.CapacityBonus,
+                Position = tank.Position
+            };
+        }
+
+        return states;
+    }
+
+    private float GetEffectiveCapacity(ThingDef fuelDef)
+    {
+        var comp = GetRefuelableCompFor(fuelDef);
+        if (comp == null)
+            return 0f;
+
+        var additionalCapacity = 0f;
+        if (Spawned)
+        {
+            foreach (var tank in GetLinkedExpansionTanks())
+            {
+                if (tank.FuelDef == fuelDef)
+                    additionalCapacity += tank.CapacityBonus;
+            }
+        }
+
+        return comp.BaseFuelCapacity + additionalCapacity;
+    }
+
+    private IEnumerable<Building_ClusterExpansionTank> GetLinkedExpansionTanks()
+    {
+        if (!Spawned || Map == null)
+            yield break;
+
+        foreach (var thing in GenRadial.RadialDistinctThingsAround(Position, Map, 4.9f, true))
+        {
+            if (thing is Building_ClusterExpansionTank tank && tank.GetLinkedConsole() == this)
+                yield return tank;
+        }
     }
 
     protected override void DrawAt(Vector3 drawLoc, bool flip = false)
@@ -112,10 +336,50 @@ public class Building_ClusterProjectionConsole : Building
         if (!assemblyActive)
             return;
 
-        var drawPosition = assemblyHeadPosition;
-        drawPosition.y = Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead);
-        var matrix = Matrix4x4.TRS(drawPosition, Quaternion.identity, new Vector3(2f, 1f, 2f));
-        Graphics.DrawMesh(MeshPool.plane10, matrix, AssemblyHeadMaterial, 0);
+        var rodAltitude  = Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead);
+        var headAltitude = Altitudes.AltitudeFor(AltitudeLayer.MoteOverhead) + 0.01f; // head above rods
+
+        var headPos = assemblyHeadPosition;
+        headPos.y = headAltitude;
+
+        // attacher_vertical: sits on the E/W (horizontal) rail, tracks head's x position
+        var attacherVerticalPos = new Vector3(headPos.x, rodAltitude, assemblyRailHorizontalZ);
+        // attacher_horizontal: sits on the N/S (vertical) rail, tracks head's z position
+        var attacherHorizontalPos = new Vector3(assemblyRailVerticalX, rodAltitude, headPos.z);
+
+        // rod_vertical: stretches along z between attacherVertical and head (no texture rotation)
+        DrawRodVertical(attacherVerticalPos, headPos, RodVerticalMaterial);
+
+        // rod_horizontal: stretches along x between attacherHorizontal and head (no texture rotation)
+        DrawRodHorizontal(attacherHorizontalPos, headPos, RodHorizontalMaterial);
+
+        // Draw attachers
+        var attacherScale = new Vector3(1.5f, 1f, 1.5f);
+        Graphics.DrawMesh(MeshPool.plane10, Matrix4x4.TRS(attacherVerticalPos,   Quaternion.identity, attacherScale), AttacherVerticalMaterial,   0);
+        Graphics.DrawMesh(MeshPool.plane10, Matrix4x4.TRS(attacherHorizontalPos, Quaternion.identity, attacherScale), AttacherHorizontalMaterial, 0);
+
+        // Draw assembly head on top
+        Graphics.DrawMesh(MeshPool.plane10, Matrix4x4.TRS(headPos, Quaternion.identity, new Vector3(2f, 1f, 2f)), AssemblyHeadMaterial, 0);
+    }
+
+    // Stretches a horizontal (E/W) texture along the x-axis without rotation.
+    private static void DrawRodHorizontal(Vector3 a, Vector3 b, Material mat)
+    {
+        var length = Mathf.Abs(b.x - a.x);
+        if (length < 0.01f)
+            return;
+        var midpoint = new Vector3((a.x + b.x) * 0.5f, a.y, a.z);
+        Graphics.DrawMesh(MeshPool.plane10, Matrix4x4.TRS(midpoint, Quaternion.identity, new Vector3(length, 1f, 1f)), mat, 0);
+    }
+
+    // Stretches a vertical (N/S) texture along the z-axis without rotation.
+    private static void DrawRodVertical(Vector3 a, Vector3 b, Material mat)
+    {
+        var length = Mathf.Abs(b.z - a.z);
+        if (length < 0.01f)
+            return;
+        var midpoint = new Vector3(a.x, a.y, (a.z + b.z) * 0.5f);
+        Graphics.DrawMesh(MeshPool.plane10, Matrix4x4.TRS(midpoint, Quaternion.identity, new Vector3(1f, 1f, length)), mat, 0);
     }
 
     public override void DrawExtraSelectionOverlays()
@@ -193,7 +457,7 @@ public class Building_ClusterProjectionConsole : Building
 
     private void TryStartAssemblyAndLaunch()
     {
-        if (assemblyActive)
+        if (assemblyActive || LaunchActive)
             return;
 
         if (!LaunchAreaSolver.TryComputeLargestArea(Map, Position, def.Size, out var area))
@@ -233,6 +497,8 @@ public class Building_ClusterProjectionConsole : Building
         assemblyStayTicksLeft = 0;
         assemblyReturning = false;
         assemblyHeadPosition = this.TrueCenter();
+        assemblyRailHorizontalZ = area.RailHorizontalZ;
+        assemblyRailVerticalX   = area.RailVerticalX;
         assemblyActive = true;
         Messages.Message("CP_AssemblyStarted".Translate(assemblyTargets.Count), MessageTypeDefOf.TaskCompletion, false);
     }
@@ -260,6 +526,31 @@ public class Building_ClusterProjectionConsole : Building
                     continue;
 
                 result.Add(building);
+            }
+        }
+
+        return result;
+    }
+
+    private List<Building_ClusterPod> GetClusterPodsInLaunchArea(LaunchAreaData area)
+    {
+        var result = new List<Building_ClusterPod>();
+        var seenPods = new HashSet<Building_ClusterPod>();
+        var launchableSet = new HashSet<IntVec3>(area.launchableCells);
+
+        for (var i = 0; i < area.launchableCells.Count; i++)
+        {
+            var things = area.launchableCells[i].GetThingList(Map);
+            for (var j = 0; j < things.Count; j++)
+            {
+                if (things[j] is not Building_ClusterPod pod)
+                    continue;
+                if (!seenPods.Add(pod))
+                    continue;
+                if (!IsFullyInsideLaunchableArea(pod, launchableSet))
+                    continue;
+
+                result.Add(pod);
             }
         }
 
@@ -376,13 +667,11 @@ public class Building_ClusterProjectionConsole : Building
     {
         var map = building.Map;
         var position = building.Position;
-        var rotation = building.Rotation;
 
-        building.DeSpawn(DestroyMode.Vanish);
         var pod = (Building_ClusterPod)ThingMaker.MakeThing(CP_ThingDefOf.CP_ClusterPod);
         pod.SetFaction(Faction.OfPlayer);
-        GenSpawn.Spawn(pod, position, map, rotation);
         pod.Store(building);
+        GenSpawn.Spawn(pod, position, map, Rot4.North);
     }
 
     private void FinishAssembly()
@@ -392,6 +681,495 @@ public class Building_ClusterProjectionConsole : Building
         assemblyReturning = false;
         assemblyActive = false;
         Messages.Message("CP_AssemblyComplete".Translate(), MessageTypeDefOf.TaskCompletion, false);
+    }
+
+    private void StartChoosingLaunchDestination()
+    {
+        if (!Spawned)
+            return;
+
+        var launchDisableReason = GetLaunchDisabledReason();
+        if (!launchDisableReason.NullOrEmpty())
+        {
+            Messages.Message(launchDisableReason, MessageTypeDefOf.RejectInput, false);
+            return;
+        }
+
+        var originTile = Map.Tile;
+        CameraJumper.TryJump(CameraJumper.GetWorldTarget(new GlobalTargetInfo(originTile)));
+        Find.WorldSelector.ClearSelection();
+        Find.WorldTargeter.BeginTargeting(
+            target => ChooseLaunchDestination(target, originTile),
+            true,
+            CompLaunchable.TargeterMouseAttachment,
+            true,
+            () => DrawLaunchRangeRing(originTile),
+            target => GetLaunchTargetLabel(target, originTile),
+            null,
+            originTile,
+            true);
+    }
+
+    private bool ChooseLaunchDestination(GlobalTargetInfo target, PlanetTile originTile)
+    {
+        if (!target.IsValid || !target.Tile.Valid)
+            return false;
+
+        var launchDisableReason = GetLaunchDisabledReason();
+        if (!launchDisableReason.NullOrEmpty())
+        {
+            Messages.Message(launchDisableReason, this, MessageTypeDefOf.RejectInput, false);
+            return true;
+        }
+
+        var pods = GetCurrentLaunchPods();
+        if (pods.Count == 0)
+            return true;
+
+        if (pods.Any(pod => pod.HasTransportablePawns()) && !TryGetBeaconMaintainedDestinationMap(target.Tile, out _))
+            return ChooseClusterWorldTarget(target, originTile, pods);
+
+        if (TryGetDestinationMapForCellTargeting(target.Tile, out var destinationMap))
+        {
+            StartChoosingMapLandingCell(target.Tile, destinationMap, pods);
+            return true;
+        }
+
+        return TryBeginLaunchSequence(target.Tile, new CP_TransportersArrivalAction_ClusterDrop());
+    }
+
+    private bool ChooseClusterWorldTarget(GlobalTargetInfo target, PlanetTile originTile, List<Building_ClusterPod> pods)
+    {
+        if (!target.IsValid)
+        {
+            Messages.Message("MessageTransportPodsDestinationIsInvalid".Translate(), MessageTypeDefOf.RejectInput, false);
+            return false;
+        }
+
+        if (target.HasWorldObject && !target.WorldObject.def.validLaunchTarget)
+        {
+            Messages.Message("MessageWorldObjectIsInvalid".Translate(target.WorldObject.Named("OBJECT")), MessageTypeDefOf.RejectInput, false);
+            return false;
+        }
+
+        if (ModsConfig.OdysseyActive && target.HasWorldObject && target.WorldObject.RequiresSignalJammerToReach)
+        {
+            Messages.Message("TransportPodDestinationRequiresSignalJammer".Translate(), MessageTypeDefOf.RejectInput, false);
+            return false;
+        }
+
+        var distance = GetWorldDistance(originTile, target.Tile);
+        var maxLaunchDistance = GetMaxLaunchDistance(pods.Count);
+        if (maxLaunchDistance >= 0 && distance > maxLaunchDistance)
+        {
+            Messages.Message("TransportPodDestinationBeyondMaximumRange".Translate(), MessageTypeDefOf.RejectInput, false);
+            return false;
+        }
+
+        var options = GetClusterFloatMenuOptionsAt(target.Tile, pods).ToList();
+        if (!options.Any())
+        {
+            Messages.Message("MessageTransportPodsDestinationIsInvalid".Translate(), MessageTypeDefOf.RejectInput, false);
+            return false;
+        }
+
+        if (options.Count == 1)
+        {
+            if (!options[0].Disabled)
+            {
+                options[0].action();
+                return true;
+            }
+
+            return false;
+        }
+
+        Find.WindowStack.Add(new FloatMenu(options));
+        return false;
+    }
+
+    private IEnumerable<FloatMenuOption> GetClusterFloatMenuOptionsAt(PlanetTile destinationTile, List<Building_ClusterPod> pods)
+    {
+        var previewPods = GetLaunchPreviewPods(pods);
+        var anything = false;
+
+        if (TransportersArrivalAction_FormCaravan.CanFormCaravanAt(previewPods, destinationTile)
+            && !Find.WorldObjects.AnySettlementBaseAt(destinationTile)
+            && !Find.WorldObjects.AnySiteAt(destinationTile))
+        {
+            anything = true;
+            yield return new FloatMenuOption(
+                "FormCaravanHere".Translate(),
+                () => BeginLaunchSequenceFromMenu(destinationTile, new CP_TransportersArrivalAction_ClusterCamp()));
+        }
+
+        var worldObjects = Find.WorldObjects.AllWorldObjects;
+        for (var i = 0; i < worldObjects.Count; i++)
+        {
+            var worldObject = worldObjects[i];
+            if (worldObject.Tile != destinationTile)
+                continue;
+
+            if (worldObject is Settlement settlement && settlement.Attackable)
+            {
+                anything = true;
+                foreach (var option in CP_TransportersArrivalAction_ClusterAttackSettlement.GetFloatMenuOptions(BeginLaunchSequenceFromMenu, previewPods, settlement))
+                    yield return option;
+                continue;
+            }
+
+            if (worldObject is Site site)
+            {
+                anything = true;
+                foreach (var option in CP_TransportersArrivalAction_ClusterVisitSite.GetFloatMenuOptions(BeginLaunchSequenceFromMenu, previewPods, site))
+                    yield return option;
+                continue;
+            }
+
+            foreach (var option in worldObject.GetTransportersFloatMenuOptions(previewPods, BeginLaunchSequenceFromMenu))
+            {
+                anything = true;
+                yield return option;
+            }
+        }
+
+        if (!anything && !Find.World.Impassable(destinationTile))
+        {
+            yield return new FloatMenuOption(
+                "FormCaravanHere".Translate(),
+                () => BeginLaunchSequenceFromMenu(destinationTile, new CP_TransportersArrivalAction_ClusterCamp()));
+        }
+    }
+
+    private void BeginLaunchSequenceFromMenu(PlanetTile destinationTile, TransportersArrivalAction arrivalAction)
+    {
+        TryBeginLaunchSequence(destinationTile, arrivalAction);
+    }
+
+    private bool TryGetDestinationMapForCellTargeting(PlanetTile destinationTile, out Map map)
+    {
+        map = null;
+        var mapParent = Find.WorldObjects.MapParentAt(destinationTile);
+        if (mapParent == null || !mapParent.HasMap)
+            return false;
+
+        map = mapParent.Map;
+        return map != null;
+    }
+
+    private static bool TryGetBeaconMaintainedDestinationMap(PlanetTile destinationTile, out Map map)
+    {
+        map = null;
+        var mapParent = Find.WorldObjects.MapParentAt(destinationTile);
+        if (mapParent == null || !mapParent.HasMap || mapParent.Map == null)
+            return false;
+
+        if (!CP_ProjectionBeaconUtility.HasActiveProjectionBeacon(mapParent.Map))
+            return false;
+
+        map = mapParent.Map;
+        return true;
+    }
+
+    private void StartChoosingMapLandingCell(PlanetTile destinationTile, Map destinationMap, List<Building_ClusterPod> launchPods)
+    {
+        var footprintOffsets = BuildClusterFootprintOffsets(launchPods);
+
+        CameraJumper.TryHideWorld();
+        CameraJumper.TryJump(destinationMap.Center, destinationMap);
+
+        Action<LocalTargetInfo> onSelected = target =>
+        {
+            if (!target.IsValid || !target.Cell.IsValid)
+                return;
+
+            TryBeginLaunchSequence(destinationTile, new CP_TransportersArrivalAction_ClusterDrop(target.Cell));
+        };
+
+        Action<LocalTargetInfo> onHighlight = target => DrawLandingGhost(target, destinationMap, footprintOffsets);
+        Func<LocalTargetInfo, bool> validator = target => IsLandingGhostPlacementValid(target, destinationMap, footprintOffsets);
+
+        Find.Targeter.BeginTargeting(
+            TargetingParameters.ForDropPodsDestination(),
+            onSelected,
+            onHighlight,
+            validator,
+            null,
+            () => CameraJumper.TryHideWorld(),
+            CompLaunchable.TargeterMouseAttachment);
+    }
+
+    private static List<IntVec3> BuildClusterFootprintOffsets(List<Building_ClusterPod> launchPods)
+    {
+        var offsets = new HashSet<IntVec3>();
+        if (launchPods == null || launchPods.Count == 0)
+            return offsets.ToList();
+
+        var anchor = GetClusterLandingAnchor(launchPods);
+        for (var i = 0; i < launchPods.Count; i++)
+        {
+            var pod = launchPods[i];
+            if (pod == null || pod.Destroyed)
+                continue;
+
+            var containedThing = pod.ContainedThing;
+            if (containedThing is Building containedBuilding)
+            {
+                foreach (var occupiedCell in GenAdj.OccupiedRect(pod.Position, containedBuilding.Rotation, containedBuilding.def.size))
+                    offsets.Add(occupiedCell - anchor);
+                continue;
+            }
+
+            offsets.Add(pod.Position - anchor);
+        }
+
+        return offsets.ToList();
+    }
+
+    private static void DrawLandingGhost(LocalTargetInfo target, Map map, List<IntVec3> footprintOffsets)
+    {
+        if (!target.IsValid || !target.Cell.IsValid || map == null || footprintOffsets == null || footprintOffsets.Count == 0)
+            return;
+
+        var ghostCells = footprintOffsets
+            .Select(offset => target.Cell + offset)
+            .Where(cell => cell.InBounds(map))
+            .Distinct()
+            .ToList();
+
+        if (ghostCells.Count == 0)
+            return;
+
+        GenDraw.DrawDiagonalStripes(ghostCells, LandingGhostColor, 0.021f);
+        GenDraw.DrawFieldEdges(ghostCells, LandingGhostEdgeColor);
+    }
+
+    private static bool IsLandingGhostPlacementValid(LocalTargetInfo target, Map map, List<IntVec3> footprintOffsets)
+    {
+        if (!target.IsValid || !target.Cell.IsValid || map == null || footprintOffsets == null || footprintOffsets.Count == 0)
+            return false;
+
+        for (var i = 0; i < footprintOffsets.Count; i++)
+        {
+            var cell = target.Cell + footprintOffsets[i];
+            if (!cell.InBounds(map))
+                return false;
+        }
+
+        return true;
+    }
+
+    private bool TryBeginLaunchSequence(PlanetTile destinationTile, TransportersArrivalAction arrivalAction)
+    {
+        var launchDisableReason = GetLaunchDisabledReason();
+        if (!launchDisableReason.NullOrEmpty())
+        {
+            Messages.Message(launchDisableReason, this, MessageTypeDefOf.RejectInput, false);
+            return true;
+        }
+
+        var pods = GetCurrentLaunchPods();
+        if (pods.Count == 0)
+        {
+            Messages.Message("CP_NoClusterPodsReady".Translate(), this, MessageTypeDefOf.RejectInput, false);
+            return true;
+        }
+
+        if (arrivalAction == null && pods.Any(pod => pod.HasTransportablePawns()))
+        {
+            Messages.Message("MessageTransportPodsDestinationIsInvalid".Translate(), MessageTypeDefOf.RejectInput, false);
+            return false;
+        }
+
+        var perTileFuelCost = GetLaunchFuelPerTile(pods.Count);
+        var distance = GetWorldDistance(Map.Tile, destinationTile);
+        var requiredFuel = perTileFuelCost * distance;
+
+        if (requiredFuel > 0f && (FuelComp == null || FuelComp.Fuel < requiredFuel))
+        {
+            var storedFuel = FuelComp == null ? "0" : FuelComp.Fuel.ToStringDecimalIfSmall();
+            Messages.Message("CP_NotEnoughFuelForLaunch".Translate(requiredFuel.ToStringDecimalIfSmall(), storedFuel), this, MessageTypeDefOf.RejectInput, false);
+            return true;
+        }
+
+        if (FuelComp != null && requiredFuel > 0f)
+            FuelComp.ConsumeFuel(requiredFuel);
+
+        launchDestinationTile = destinationTile;
+        launchArrivalAction = arrivalAction ?? new CP_TransportersArrivalAction_ClusterDrop();
+        launchCountdownTicksLeft = Mathf.Max(1, AssemblyProps.launchCountdownTicks);
+        launchGroupID = Find.UniqueIDsManager.GetNextTransporterGroupID();
+        var landingAnchor = GetClusterLandingAnchor(pods);
+        pendingPodLaunches = pods
+            .Select(pod => new PendingPodLaunch
+            {
+                Pod = pod,
+                DelayTicks = Rand.RangeInclusive(0, Mathf.Max(0, AssemblyProps.maxLaunchRandomDelayTicks)),
+                LandingOffset = pod.Position - landingAnchor
+            })
+            .ToList();
+
+        Messages.Message("CP_LaunchCountdownStarted".Translate((launchCountdownTicksLeft / 60f).ToString("0.#"), pods.Count), this, MessageTypeDefOf.TaskCompletion, false);
+        return true;
+    }
+
+    private void TickLaunch()
+    {
+        if (launchCountdownTicksLeft > 0)
+        {
+            launchCountdownTicksLeft--;
+            if (launchCountdownTicksLeft > 0)
+                return;
+        }
+
+        for (var i = pendingPodLaunches.Count - 1; i >= 0; i--)
+        {
+            var pending = pendingPodLaunches[i];
+            if (pending.Pod == null || pending.Pod.Destroyed || !pending.Pod.Spawned)
+            {
+                pendingPodLaunches.RemoveAt(i);
+                continue;
+            }
+
+            if (pending.DelayTicks > 0)
+            {
+                pending.DelayTicks--;
+                continue;
+            }
+
+            LaunchPod(pending);
+            pendingPodLaunches.RemoveAt(i);
+        }
+
+        if (pendingPodLaunches.Count == 0)
+        {
+            launchDestinationTile = PlanetTile.Invalid;
+            launchGroupID = -1;
+            launchArrivalAction = null;
+            Messages.Message("CP_LaunchStarted".Translate(), this, MessageTypeDefOf.TaskCompletion, false);
+        }
+    }
+
+    private void LaunchPod(PendingPodLaunch pending)
+    {
+        var pod = pending.Pod;
+        if (pod == null || pod.Destroyed)
+            return;
+
+        var map = pod.Map;
+        var position = pod.Position;
+        pod.SetLandingOffset(pending.LandingOffset);
+
+        var releaseInfantryPawnsSeparately = pod.HasTransportablePawns();
+
+        var activeTransporter = (ActiveTransporter)ThingMaker.MakeThing(ThingDefOf.ActiveDropPod);
+        activeTransporter.Contents = pod.ExtractActiveTransporterInfo(CP_ThingDefOf.CP_ClusterPod, releaseInfantryPawnsSeparately);
+        activeTransporter.Rotation = Rot4.North;
+
+        var skyfaller = (FlyShipLeaving)SkyfallerMaker.MakeSkyfaller(ThingDefOf.DropPodLeaving, activeTransporter);
+        skyfaller.groupID = launchGroupID;
+        skyfaller.destinationTile = launchDestinationTile;
+        skyfaller.arrivalAction = launchArrivalAction ?? new CP_TransportersArrivalAction_ClusterDrop();
+        skyfaller.worldObjectDef = WorldObjectDefOf.TravellingTransporters;
+
+        GenSpawn.Spawn(skyfaller, position, map);
+    }
+
+    private static IntVec3 GetClusterLandingAnchor(List<Building_ClusterPod> pods)
+    {
+        if (pods == null || pods.Count == 0)
+            return IntVec3.Zero;
+
+        var sumX = 0f;
+        var sumZ = 0f;
+        for (var i = 0; i < pods.Count; i++)
+        {
+            sumX += pods[i].Position.x;
+            sumZ += pods[i].Position.z;
+        }
+
+        return new IntVec3(Mathf.RoundToInt(sumX / pods.Count), 0, Mathf.RoundToInt(sumZ / pods.Count));
+    }
+
+    private TaggedString GetLaunchDisabledReason()
+    {
+        if (assemblyActive || LaunchActive)
+            return "Busy".Translate();
+        if (!Spawned)
+            return "CP_NoValidLaunchArea".Translate();
+        if (!LaunchAreaSolver.TryComputeLargestArea(Map, Position, def.Size, out var area))
+            return "CP_NoValidLaunchArea".Translate();
+        if (area.allInteriorCells.Any(cell => cell.Roofed(Map)))
+            return "CP_LaunchAreaRoofed".Translate();
+        if (GetClusterPodsInLaunchArea(area).Count == 0)
+            return "CP_NoClusterPodsReady".Translate();
+
+        var perTileFuelCost = GetLaunchFuelPerTile(GetClusterPodsInLaunchArea(area).Count);
+        if (FuelComp == null || FuelComp.Fuel < perTileFuelCost)
+        {
+            var storedFuel = FuelComp == null ? "0" : FuelComp.Fuel.ToStringDecimalIfSmall();
+            return "CP_NotEnoughFuel".Translate(perTileFuelCost.ToStringDecimalIfSmall(), storedFuel);
+        }
+
+        return null;
+    }
+
+    private List<Building_ClusterPod> GetCurrentLaunchPods()
+    {
+        if (!LaunchAreaSolver.TryComputeLargestArea(Map, Position, def.Size, out var area))
+            return new List<Building_ClusterPod>();
+        return GetClusterPodsInLaunchArea(area);
+    }
+
+    private float GetLaunchFuelPerTile(int podCount)
+    {
+        return podCount * AssemblyProps.baseFuelConsumption;
+    }
+
+    private int GetMaxLaunchDistance(int podCount)
+    {
+        var fuelPerTile = GetLaunchFuelPerTile(podCount);
+        if (fuelPerTile <= 0f || FuelComp == null)
+            return 0;
+        return Mathf.FloorToInt(FuelComp.Fuel / fuelPerTile);
+    }
+
+    private int GetWorldDistance(PlanetTile originTile, PlanetTile destinationTile)
+    {
+        return Find.WorldGrid.TraversalDistanceBetween(originTile, destinationTile, passImpassable: true, int.MaxValue, canTraverseLayers: true);
+    }
+
+    private List<IThingHolder> GetLaunchPreviewPods(List<Building_ClusterPod> pods)
+    {
+        return pods
+            .Select(pod => (IThingHolder)new LaunchPreviewHolder(pod.GetLaunchPreviewContents()))
+            .ToList();
+    }
+
+    private void DrawLaunchRangeRing(PlanetTile originTile)
+    {
+        var podCount = GetCurrentLaunchPods().Count;
+        if (podCount <= 0)
+            return;
+
+        var maxDistance = GetMaxLaunchDistance(podCount);
+        if (maxDistance <= 0)
+            return;
+
+        var originOnSelectedLayer = Find.WorldSelector.SelectedLayer?.GetClosestTile_NewTemp(originTile) ?? originTile;
+        GenDraw.DrawWorldRadiusRing(originOnSelectedLayer, maxDistance, CompPilotConsole.GetFuelRadiusMat(originOnSelectedLayer));
+    }
+
+    private string GetLaunchTargetLabel(GlobalTargetInfo target, PlanetTile originTile)
+    {
+        if (!target.IsValid || !target.Tile.Valid)
+            return "";
+
+        var podCount = GetCurrentLaunchPods().Count;
+        var distance = GetWorldDistance(originTile, target.Tile);
+        var maxDistance = GetMaxLaunchDistance(podCount);
+        var requiredFuel = GetLaunchFuelPerTile(podCount) * distance;
+        return "CP_LaunchTargetLabel".Translate(distance, maxDistance, requiredFuel.ToStringDecimalIfSmall());
     }
 
     private void CleanupAssemblyEffecter()
@@ -470,6 +1248,22 @@ public class Building_ClusterProjectionConsole : Building
         if (steelComp != null)
             status += "\nStored steel: " + steelComp.Fuel.ToStringDecimalIfSmall() + " / " + steelComp.Props.fuelCapacity.ToStringDecimalIfSmall();
 
+        if (FuelComp != null)
+            status += "\nStored chemfuel: " + FuelComp.Fuel.ToStringDecimalIfSmall() + " / " + FuelComp.Props.fuelCapacity.ToStringDecimalIfSmall();
+
+        var readyPods = Spawned ? GetCurrentLaunchPods().Count : 0;
+        if (readyPods > 0)
+        {
+            var perTileFuel = GetLaunchFuelPerTile(readyPods);
+            status += "\nReady cluster pods: " + readyPods;
+            status += "\nFuel per world tile: " + perTileFuel.ToStringDecimalIfSmall();
+            status += "\nMax launch distance: " + GetMaxLaunchDistance(readyPods);
+        }
+
+        if (launchCountdownTicksLeft > 0)
+            status += "\n" + "CP_LaunchCountdownStatus".Translate(launchCountdownTicksLeft.ToStringTicksToPeriod());
+
         return baseText.NullOrEmpty() ? status : baseText + "\n" + status;
     }
 }
+

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ClusterProjection")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+42477470ed1fce30db05f1506d03dbfd72075173")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+91d39210fd150f8b2930dab416d2b8936e81ea8b")]
 [assembly: System.Reflection.AssemblyProductAttribute("ClusterProjection")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ClusterProjection")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

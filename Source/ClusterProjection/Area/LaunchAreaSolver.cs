@@ -170,6 +170,11 @@ public static class LaunchAreaSolver
         if (candidate.allInteriorCells.Count == 0)
             return false;
 
+        // Record world-space centres of the rail arms so the console can anchor
+        // rod/attacher visuals to the actual rail positions.
+        candidate.RailHorizontalZ = xArm.Root.z + 0.5f; // E/W arm: all cells share same z
+        candidate.RailVerticalX   = zArm.Root.x + 0.5f; // N/S arm: all cells share same x
+
         return true;
     }
 

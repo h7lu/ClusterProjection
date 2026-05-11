@@ -21,4 +21,19 @@
   <CP_LoadedSteel>Loaded {0} steel.</CP_LoadedSteel>
   <CP_ClusterPodEmpty>Contains no building.</CP_ClusterPodEmpty>
   <CP_ClusterPodContains>Contains: {0}</CP_ClusterPodContains>
+  <CP_LaunchCluster>Launch</CP_LaunchCluster>
+  <CP_LaunchClusterDesc>Select a destination world tile and launch all assembled cluster pods after a short countdown.</CP_LaunchClusterDesc>
+  <CP_NoClusterPodsReady>No assembled cluster pods are currently in the launch area.</CP_NoClusterPodsReady>
+  <CP_LaunchAreaRoofed>The launch area must be unroofed before launch.</CP_LaunchAreaRoofed>
+  <CP_NotEnoughFuelForLaunch>Need {0} chemfuel for this launch. Stored: {1}.</CP_NotEnoughFuelForLaunch>
+  <CP_LaunchCountdownStarted>Launch countdown started: {0} seconds for {1} pods.</CP_LaunchCountdownStarted>
+  <CP_LaunchStarted>Cluster launch sequence initiated.</CP_LaunchStarted>
+  <CP_ClusterArrived>Cluster pods have arrived at the target tile.</CP_ClusterArrived>
+  <CP_LaunchCountdownStatus>Launch countdown: {0}</CP_LaunchCountdownStatus>
+  <CP_LaunchTargetLabel>Distance: {0} / {1}, Fuel: {2}</CP_LaunchTargetLabel>
+  <CP_CapacityBonus>Capacity bonus: +{0} {1}</CP_CapacityBonus>
+  <CP_ExpansionTankUnlinked>Not linked to a cluster projection console.</CP_ExpansionTankUnlinked>
+  <CP_ExpansionTankLinked>Linked console: {0}</CP_ExpansionTankLinked>
+  <CP_DeployProjectionCamp>Deploy projection camp here</CP_DeployProjectionCamp>
+  <CP_ProjectionBeaconRemaining>Projection hold remaining: {0}</CP_ProjectionBeaconRemaining>
 </LanguageData>

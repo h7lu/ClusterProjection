@@ -8,3 +8,4 @@ C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\ClusterProjection\1.
 C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\ClusterProjection\1.6\Assemblies\ClusterProjection.pdb
 C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\ClusterProjection\Source\ClusterProjection\obj\Release\ClusterProjection.dll
 C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\ClusterProjection\Source\ClusterProjection\obj\Release\ClusterProjection.pdb
+C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\ClusterProjection\Source\ClusterProjection\obj\Release\ClusterP.6064C05A.Up2Date

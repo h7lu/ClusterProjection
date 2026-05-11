@@ -17,11 +17,11 @@ public class PlaceWorker_AutoAssemblyRail : PlaceWorker
                 continue;
 
             // The direction of the connection must align with the new rail's axis.
-            // E/W neighbours → the new rail extends horizontally; N/S neighbours → vertically.
+            // E/W neighbours = the new rail extends horizontally; N/S neighbours = vertically.
             bool connectionIsHorizontal = (dir.x != 0);
             if (connectionIsHorizontal != axisIsHorizontal)
             {
-                // A neighbour exists in a perpendicular direction – check if it's a rail or console
+                // A neighbour exists in a perpendicular direction - check if it's a rail or console
                 // before rejecting, so empty cells don't trigger the rule.
                 var thingInDir = c.GetFirstThing(map, CP_ThingDefOf.CP_AutoAssemblyRail)
                               ?? (Thing)c.GetFirstThing(map, CP_ThingDefOf.CP_ClusterProjectionConsole);

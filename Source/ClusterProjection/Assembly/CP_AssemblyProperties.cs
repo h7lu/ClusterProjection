@@ -9,4 +9,6 @@ public class CP_AssemblyProperties : DefModExtension
     public float baseFuelConsumption = 1f;
     public float assemblyHeadSpeedCellsPerTick = 0.08f;
     public int baseAssemblyTicks = 60;
+    public int launchCountdownTicks = 180;
+    public int maxLaunchRandomDelayTicks = 30;
 }

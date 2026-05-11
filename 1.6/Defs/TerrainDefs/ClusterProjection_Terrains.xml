@@ -6,11 +6,12 @@
     <description>Launch-qualified flooring used by cluster projection consoles.</description>
     <texturePath>cluster_launch_ground</texturePath>
     <costList>
-      <Steel>2</Steel>
+      <Steel>3</Steel>
+      <Plasteel>1</Plasteel>
     </costList>
     <researchPrerequisites>
       <li>ClusterProjection</li>
     </researchPrerequisites>
-    <designationCategory>Structure</designationCategory>
+    <designationCategory>Misc</designationCategory>
   </TerrainDef>
 </Defs>
