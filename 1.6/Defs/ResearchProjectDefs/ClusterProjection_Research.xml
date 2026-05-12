@@ -3,11 +3,27 @@
   <ResearchProjectDef>
     <defName>ClusterProjection</defName>
     <label>cluster projection</label>
-    <description>Unlocks cluster projection infrastructure for packing and launching local structures.</description>
-    <baseCost>2000</baseCost>
+    <description>Learns cluster projection, a technology from the mechnoids. Allows packing and launching local structures.</description>
+    <baseCost>4000</baseCost>
     <techLevel>Industrial</techLevel>
     <prerequisites>
       <li>TransportPod</li>
     </prerequisites>
+    <researchViewX>14.00</researchViewX>
+    <researchViewY>1.20</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>AdvancedClusterProjection</defName>
+    <label>advanced cluster projection</label>
+    <description>Refines cluster projection into a higher-throughput platform with advanced console control.</description>
+    <baseCost>6000</baseCost>
+    <techLevel>Industrial</techLevel>
+    <prerequisites>
+      <li>AdvancedFabrication</li>
+      <li>ClusterProjection</li>
+    </prerequisites>
+    <researchViewX>19.00</researchViewX>
+    <researchViewY>0.60</researchViewY>
   </ResearchProjectDef>
 </Defs>

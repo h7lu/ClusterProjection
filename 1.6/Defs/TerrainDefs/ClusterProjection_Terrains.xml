@@ -6,12 +6,27 @@
     <description>Launch-qualified flooring used by cluster projection consoles.</description>
     <texturePath>cluster_launch_ground</texturePath>
     <costList>
-      <Steel>3</Steel>
-      <Plasteel>1</Plasteel>
+      <Steel>4</Steel>
+      <Uranium>2</Uranium>
     </costList>
+    <fertility>0</fertility>
+    <edgeType>Hard</edgeType>
+    <statBases>
+      <WorkToBuild>800</WorkToBuild>
+      <Beauty>-2</Beauty>
+      <Cleanliness>0.2</Cleanliness>
+      <CleaningTimeFactor>1.6</CleaningTimeFactor>
+      <Flammability>0</Flammability>
+    </statBases>
     <researchPrerequisites>
       <li>ClusterProjection</li>
     </researchPrerequisites>
+    <affordances>
+      <li>Light</li>
+      <li>Medium</li>
+      <li>Heavy</li>
+    </affordances>
+    <constructionSkillPrerequisite>8</constructionSkillPrerequisite>
     <designationCategory>Misc</designationCategory>
   </TerrainDef>
 </Defs>

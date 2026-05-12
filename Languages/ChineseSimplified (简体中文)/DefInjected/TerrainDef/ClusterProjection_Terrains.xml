@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<LanguageData>
+  
+  <!-- EN: launcher floor -->
+  <CP_LauncherFloor.label>发射架</CP_LauncherFloor.label>
+  <!-- EN: Launch-qualified flooring used by cluster projection consoles. -->
+  <CP_LauncherFloor.description>适用于大规模发射的发射架，内含燃料填充管道，极耐高温。</CP_LauncherFloor.description>
+  
+</LanguageData>

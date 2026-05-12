@@ -24,7 +24,7 @@ public class PlaceWorker_AutoAssemblyRail : PlaceWorker
                 // A neighbour exists in a perpendicular direction - check if it's a rail or console
                 // before rejecting, so empty cells don't trigger the rule.
                 var thingInDir = c.GetFirstThing(map, CP_ThingDefOf.CP_AutoAssemblyRail)
-                              ?? (Thing)c.GetFirstThing(map, CP_ThingDefOf.CP_ClusterProjectionConsole);
+                              ?? c.GetThingList(map).FirstOrDefault(t => t is Building_ClusterProjectionConsole);
                 if (thingInDir != null)
                     return "CP_RailMustStayStraight".Translate();
                 continue;
@@ -41,7 +41,7 @@ public class PlaceWorker_AutoAssemblyRail : PlaceWorker
                 continue;
             }
 
-            var console = c.GetFirstThing(map, CP_ThingDefOf.CP_ClusterProjectionConsole);
+            var console = c.GetThingList(map).FirstOrDefault(t => t is Building_ClusterProjectionConsole);
             if (console != null)
             {
                 hasValidConnection = true;

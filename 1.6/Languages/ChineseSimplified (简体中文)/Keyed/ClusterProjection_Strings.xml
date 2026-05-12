@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<LanguageData>
+  <!-- EN: Rail must connect to a cluster projection console or a valid rail chain. -->
+  <CP_NotConnectedToConsole>TODO</CP_NotConnectedToConsole>
+  <!-- EN: Auto assembly rails must stay straight and axis-aligned. -->
+  <CP_RailMustStayStraight>TODO</CP_RailMustStayStraight>
+  <!-- EN: No valid launch area found between orthogonal rails. -->
+  <CP_NoValidLaunchArea>TODO</CP_NoValidLaunchArea>
+  <!-- EN: Steel -->
+  <CP_Steel>TODO</CP_Steel>
+  <!-- EN: Load steel -->
+  <CP_LoadSteel>TODO</CP_LoadSteel>
+  <!-- EN: Load available steel into the cluster projection console. -->
+  <CP_LoadSteelDesc>TODO</CP_LoadSteelDesc>
+  <!-- EN: Eject steel -->
+  <CP_EjectSteel>TODO</CP_EjectSteel>
+  <!-- EN: Eject all stored steel onto the ground. -->
+  <CP_EjectSteelDesc>TODO</CP_EjectSteelDesc>
+  <!-- EN: Eject fuel -->
+  <CP_EjectFuel>TODO</CP_EjectFuel>
+  <!-- EN: Eject all stored chemfuel onto the ground. -->
+  <CP_EjectFuelDesc>TODO</CP_EjectFuelDesc>
+  <!-- EN: Assembly -->
+  <CP_AssemblyAndLaunch>TODO</CP_AssemblyAndLaunch>
+  <!-- EN: Assemble all launchable buildings in the launch area into cluster pods. -->
+  <CP_AssemblyAndLaunchDesc>TODO</CP_AssemblyAndLaunchDesc>
+  <!-- EN: No launchable buildings found in the launch area. -->
+  <CP_NoLaunchableBuildings>TODO</CP_NoLaunchableBuildings>
+  <!-- EN: Need {0} steel for assembly. Stored: {1}. -->
+  <CP_NotEnoughSteel>TODO</CP_NotEnoughSteel>
+  <!-- EN: Need {0} chemfuel to travel at least 1 world tile. Stored: {1}. -->
+  <CP_NotEnoughFuel>TODO</CP_NotEnoughFuel>
+  <!-- EN: Cluster assembly started for {0} buildings. -->
+  <CP_AssemblyStarted>TODO</CP_AssemblyStarted>
+  <!-- EN: Cluster assembly complete. -->
+  <CP_AssemblyComplete>TODO</CP_AssemblyComplete>
+  <!-- EN: No available steel found. -->
+  <CP_NoSteelFound>TODO</CP_NoSteelFound>
+  <!-- EN: Loaded {0} steel. -->
+  <CP_LoadedSteel>TODO</CP_LoadedSteel>
+  <!-- EN: Contains no building. -->
+  <CP_ClusterPodEmpty>TODO</CP_ClusterPodEmpty>
+  <!-- EN: Contains: {0} -->
+  <CP_ClusterPodContains>TODO</CP_ClusterPodContains>
+  <!-- EN: Launch -->
+  <CP_LaunchCluster>TODO</CP_LaunchCluster>
+  <!-- EN: Select a destination world tile and launch all assembled cluster pods after a short countdown. -->
+  <CP_LaunchClusterDesc>TODO</CP_LaunchClusterDesc>
+  <!-- EN: No assembled cluster pods are currently in the launch area. -->
+  <CP_NoClusterPodsReady>TODO</CP_NoClusterPodsReady>
+  <!-- EN: The launch area must be unroofed before launch. -->
+  <CP_LaunchAreaRoofed>TODO</CP_LaunchAreaRoofed>
+  <!-- EN: Need {0} chemfuel for this launch. Stored: {1}. -->
+  <CP_NotEnoughFuelForLaunch>TODO</CP_NotEnoughFuelForLaunch>
+  <!-- EN: Launch countdown started: {0} seconds for {1} pods. -->
+  <CP_LaunchCountdownStarted>TODO</CP_LaunchCountdownStarted>
+  <!-- EN: Cluster launch sequence initiated. -->
+  <CP_LaunchStarted>TODO</CP_LaunchStarted>
+  <!-- EN: Cluster pods have arrived at the target tile. -->
+  <CP_ClusterArrived>TODO</CP_ClusterArrived>
+  <!-- EN: Launch countdown: {0} -->
+  <CP_LaunchCountdownStatus>TODO</CP_LaunchCountdownStatus>
+  <!-- EN: Distance: {0} / {1}, Fuel: {2} -->
+  <CP_LaunchTargetLabel>TODO</CP_LaunchTargetLabel>
+  <!-- EN: Capacity bonus: +{0} {1} -->
+  <CP_CapacityBonus>TODO</CP_CapacityBonus>
+  <!-- EN: Not linked to a cluster projection console. -->
+  <CP_ExpansionTankUnlinked>TODO</CP_ExpansionTankUnlinked>
+  <!-- EN: Linked console: {0} -->
+  <CP_ExpansionTankLinked>TODO</CP_ExpansionTankLinked>
+  <!-- EN: Deploy projection camp here -->
+  <CP_DeployProjectionCamp>TODO</CP_DeployProjectionCamp>
+  <!-- EN: Projection hold remaining: {0} -->
+  <CP_ProjectionBeaconRemaining>TODO</CP_ProjectionBeaconRemaining>
+</LanguageData>

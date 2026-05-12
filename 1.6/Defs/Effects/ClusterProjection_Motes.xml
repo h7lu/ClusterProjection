@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+  <ThingDef ParentName="MoteBase">
+    <defName>CP_MoteAssembly</defName>
+    <label>cluster assembly mote</label>
+    <thingClass>MoteThrown</thingClass>
+    <altitudeLayer>MoteOverhead</altitudeLayer>
+    <mote>
+      <fadeInTime>0.5</fadeInTime>
+      <solidTime>1</solidTime>
+      <fadeOutTime>0.5</fadeOutTime>
+    </mote>
+    <graphicData>
+      <texPath>mote/mote_assembly</texPath>
+      <shaderType>MoteGlow</shaderType>
+    </graphicData>
+  </ThingDef>
+
+  <ThingDef ParentName="MoteBase">
+    <defName>CP_MoteCount1f</defName>
+    <label>cluster countdown one mote</label>
+    <thingClass>MoteThrown</thingClass>
+    <altitudeLayer>MoteOverhead</altitudeLayer>
+    <mote>
+      <fadeInTime>0</fadeInTime>
+      <solidTime>1</solidTime>
+      <fadeOutTime>0</fadeOutTime>
+    </mote>
+    <graphicData>
+      <texPath>mote/mote_count_1</texPath>
+      <shaderType>MoteGlow</shaderType>
+    </graphicData>
+  </ThingDef>
+
+  <ThingDef ParentName="MoteBase">
+    <defName>CP_MoteCount2f</defName>
+    <label>cluster countdown two mote</label>
+    <thingClass>MoteThrown</thingClass>
+    <altitudeLayer>MoteOverhead</altitudeLayer>
+    <mote>
+      <fadeInTime>0</fadeInTime>
+      <solidTime>1</solidTime>
+      <fadeOutTime>0</fadeOutTime>
+    </mote>
+    <graphicData>
+      <texPath>mote/mote_count_2</texPath>
+      <shaderType>MoteGlow</shaderType>
+    </graphicData>
+  </ThingDef>
+
+  <ThingDef ParentName="MoteBase">
+    <defName>CP_MoteCount3f</defName>
+    <label>cluster countdown three mote</label>
+    <thingClass>MoteThrown</thingClass>
+    <altitudeLayer>MoteOverhead</altitudeLayer>
+    <mote>
+      <fadeInTime>0</fadeInTime>
+      <solidTime>1</solidTime>
+      <fadeOutTime>0</fadeOutTime>
+    </mote>
+    <graphicData>
+      <texPath>mote/mote_count_3</texPath>
+      <shaderType>MoteGlow</shaderType>
+    </graphicData>
+  </ThingDef>
+
+  <ThingDef ParentName="MoteBase">
+    <defName>CP_MoteLaunch</defName>
+    <label>cluster launch mote</label>
+    <thingClass>MoteThrown</thingClass>
+    <altitudeLayer>MoteOverhead</altitudeLayer>
+    <mote>
+      <fadeInTime>0</fadeInTime>
+      <solidTime>3</solidTime>
+      <fadeOutTime>2</fadeOutTime>
+    </mote>
+    <graphicData>
+      <texPath>mote/mote_launch</texPath>
+      <shaderType>MoteGlow</shaderType>
+    </graphicData>
+  </ThingDef>
+</Defs>

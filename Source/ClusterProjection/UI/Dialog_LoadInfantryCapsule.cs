@@ -64,24 +64,32 @@ public class Dialog_LoadInfantryCapsule : Window
     {
         var titleRect = new Rect(0f, 0f, inRect.width, 35f);
         Text.Font = GameFont.Medium;
+        Text.Anchor = TextAnchor.MiddleCenter;
         Widgets.Label(titleRect, "LoadTransporters".Translate(capsule.LabelNoCount));
         Text.Font = GameFont.Small;
+        Text.Anchor = TextAnchor.UpperLeft;
 
-        var massRect = new Rect(12f, 35f, inRect.width - 24f, 24f);
+        var massRect = new Rect(12f, 35f, inRect.width - 24f, 40f);
         Widgets.Label(massRect, $"Mass: {MassUsage.ToStringMass()} / {MassCapacity.ToStringMass()}");
 
-        var contentRect = new Rect(0f, 67f, inRect.width, inRect.height - 67f);
-        Widgets.DrawMenuSection(contentRect);
-        var innerRect = contentRect.ContractedBy(17f);
+        inRect.yMin += 79f;
+        Widgets.DrawMenuSection(inRect);
+        var contentRect = inRect.ContractedBy(17f);
+        contentRect.height += 17f;
+
+        Widgets.BeginGroup(contentRect);
+        var innerRect = contentRect.AtZero();
 
         DoBottomButtons(innerRect);
 
         var listRect = innerRect;
-        listRect.height -= 59f;
+        listRect.yMax -= 59f;
         var anythingChanged = false;
         pawnsTransfer.OnGUI(listRect, out anythingChanged);
         if (anythingChanged)
             CountToTransferChanged();
+
+        Widgets.EndGroup();
     }
 
     public override bool CausesMessageBackground()

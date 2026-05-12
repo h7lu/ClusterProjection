@@ -6,7 +6,7 @@ namespace ClusterProjection;
 
 public class WorkGiver_RefuelSteelConsole : WorkGiver_Scanner
 {
-    public override ThingRequest PotentialWorkThingRequest => ThingRequest.ForDef(DefOfs.CP_ThingDefOf.CP_ClusterProjectionConsole);
+    public override ThingRequest PotentialWorkThingRequest => ThingRequest.ForGroup(ThingRequestGroup.BuildingArtificial);
 
     public override PathEndMode PathEndMode => PathEndMode.Touch;
 

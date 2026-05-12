@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<LanguageData>
+  
+  <!-- EN: cluster assembly mote -->
+  <CP_MoteAssembly.label>装配中</CP_MoteAssembly.label>
+  
+  <!-- EN: cluster countdown one mote -->
+  <CP_MoteCount1f.label>倒计时1</CP_MoteCount1f.label>
+  
+  <!-- EN: cluster countdown two mote -->
+  <CP_MoteCount2f.label>倒计时2</CP_MoteCount2f.label>
+  
+  <!-- EN: cluster countdown three mote -->
+  <CP_MoteCount3f.label>倒计时3</CP_MoteCount3f.label>
+  
+  <!-- EN: cluster launch mote -->
+  <CP_MoteLaunch.label>发射</CP_MoteLaunch.label>
+  
+</LanguageData>

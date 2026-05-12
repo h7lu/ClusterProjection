@@ -7,6 +7,7 @@ namespace ClusterProjection.DefOfs;
 public static class CP_ResearchProjectDefOf
 {
     public static ResearchProjectDef ClusterProjection;
+    public static ResearchProjectDef AdvancedClusterProjection;
 
     static CP_ResearchProjectDefOf()
     {

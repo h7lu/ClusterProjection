@@ -59,6 +59,8 @@ public class Building_ClusterProjectionConsole : Building
     private bool assemblyReturning;
     private int currentAssemblyIndex;
     private int assemblyStayTicksLeft;
+    private int lastLaunchMoteSecondShown;
+    private int launchCountdownInitialTicks;
     private Vector3 assemblyHeadPosition;
     private float assemblyRailHorizontalZ; // world-space z of the E/W rail
     private float assemblyRailVerticalX;   // world-space x of the N/S rail
@@ -167,7 +169,6 @@ public class Building_ClusterProjectionConsole : Building
     public override void ExposeData()
     {
         base.ExposeData();
-        Scribe_Collections.Look(ref linkedTankStates, "linkedTankStates", LookMode.Value, LookMode.Deep);
         if (Scribe.mode == LoadSaveMode.PostLoadInit)
         {
             assemblyActive = false;
@@ -178,7 +179,7 @@ public class Building_ClusterProjectionConsole : Building
             launchArrivalAction = null;
             assemblyTargets = new List<Building>();
             pendingPodLaunches = new List<PendingPodLaunch>();
-            linkedTankStates ??= new Dictionary<int, LinkedTankState>();
+            linkedTankStates = new Dictionary<int, LinkedTankState>();
             assemblyEffecter = null;
         }
     }
@@ -448,11 +449,12 @@ public class Building_ClusterProjectionConsole : Building
         }
     }
 
-    private static bool IsUnlaunchable(ThingDef def)
+    private bool IsUnlaunchable(ThingDef thingDef)
     {
-        if (def.terrainAffordanceNeeded == null || def.terrainAffordanceNeeded.defName != "Heavy")
+        if (thingDef.terrainAffordanceNeeded == null || thingDef.terrainAffordanceNeeded.defName != "Heavy")
             return false;
-        return def.size.x * def.size.z >= 9;
+
+        return thingDef.size.x * thingDef.size.z >= AssemblyProps.maxHeavyBuildingArea;
     }
 
     private void TryStartAssemblyAndLaunch()
@@ -463,6 +465,12 @@ public class Building_ClusterProjectionConsole : Building
         if (!LaunchAreaSolver.TryComputeLargestArea(Map, Position, def.Size, out var area))
         {
             Messages.Message("CP_NoValidLaunchArea".Translate(), MessageTypeDefOf.RejectInput, false);
+            return;
+        }
+
+        if (area.allInteriorCells.Any(cell => cell.Roofed(Map)))
+        {
+            Messages.Message("CP_LaunchAreaRoofed".Translate(), MessageTypeDefOf.RejectInput, false);
             return;
         }
 
@@ -520,6 +528,8 @@ public class Building_ClusterProjectionConsole : Building
                     continue;
                 if (building == this || building.def == CP_ThingDefOf.CP_AutoAssemblyRail || building.def == CP_ThingDefOf.CP_ClusterPod)
                     continue;
+                if (AssemblyProps.packWires && IsPackableWire(building))
+                    continue;
                 if (IsUnlaunchable(building.def))
                     continue;
                 if (!IsFullyInsideLaunchableArea(building, launchableSet))
@@ -530,6 +540,11 @@ public class Building_ClusterProjectionConsole : Building
         }
 
         return result;
+    }
+
+    private static bool IsPackableWire(Building building)
+    {
+        return building?.def.building?.isPowerConduit == true;
     }
 
     private List<Building_ClusterPod> GetClusterPodsInLaunchArea(LaunchAreaData area)
@@ -598,6 +613,8 @@ public class Building_ClusterProjectionConsole : Building
 
     private void TickAssembly()
     {
+        TrySpawnAssemblyMote();
+        RefreshAssemblyTargetsAndPackedWires();
         var speed = Mathf.Max(AssemblyProps.assemblyHeadSpeedCellsPerTick, 0.01f);
 
         if (assemblyReturning)
@@ -672,6 +689,64 @@ public class Building_ClusterProjectionConsole : Building
         pod.SetFaction(Faction.OfPlayer);
         pod.Store(building);
         GenSpawn.Spawn(pod, position, map, Rot4.North);
+
+        if (AssemblyProps.packWires && LaunchAreaSolver.TryComputeLargestArea(Map, Position, def.Size, out var area))
+            TryCapturePackedWires(area);
+    }
+
+    private void RefreshAssemblyTargetsAndPackedWires()
+    {
+        if (!assemblyActive || Map == null || !Spawned)
+            return;
+
+        if (!LaunchAreaSolver.TryComputeLargestArea(Map, Position, def.Size, out var area))
+            return;
+
+        var knownTargets = new HashSet<Building>(assemblyTargets);
+        var newTargets = GetLaunchableBuildings(area)
+            .Where(building => !knownTargets.Contains(building))
+            .OrderBy(building => (building.TrueCenter() - assemblyHeadPosition).sqrMagnitude)
+            .ToList();
+
+        for (var i = 0; i < newTargets.Count; i++)
+            assemblyTargets.Add(newTargets[i]);
+
+        if (AssemblyProps.packWires)
+            TryCapturePackedWires(area);
+    }
+
+    private void TryCapturePackedWires(LaunchAreaData area)
+    {
+        var carrierPod = GetWireCarrierPod(area);
+        if (carrierPod == null)
+            return;
+
+        var seenPositions = new HashSet<IntVec3>();
+        for (var i = 0; i < area.launchableCells.Count; i++)
+        {
+            var cell = area.launchableCells[i];
+            var things = new List<Thing>(cell.GetThingList(Map));
+            for (var j = 0; j < things.Count; j++)
+            {
+                if (things[j] is not Building wire || !IsPackableWire(wire))
+                    continue;
+                if (!seenPositions.Add(wire.Position))
+                    continue;
+                if (carrierPod.HasPackedWireAtSourcePosition(wire.Position))
+                    continue;
+
+                carrierPod.AddPackedWire(wire);
+                if (wire.Spawned)
+                    wire.DeSpawn(DestroyMode.Vanish);
+            }
+        }
+    }
+
+    private Building_ClusterPod GetWireCarrierPod(LaunchAreaData area)
+    {
+        var pods = GetClusterPodsInLaunchArea(area);
+        return pods.FirstOrDefault(pod => pod.HasPackedWires)
+            ?? pods.OrderBy(pod => pod.thingIDNumber).FirstOrDefault();
     }
 
     private void FinishAssembly()
@@ -726,14 +801,14 @@ public class Building_ClusterProjectionConsole : Building
         if (pods.Count == 0)
             return true;
 
-        if (pods.Any(pod => pod.HasTransportablePawns()) && !TryGetBeaconMaintainedDestinationMap(target.Tile, out _))
-            return ChooseClusterWorldTarget(target, originTile, pods);
-
         if (TryGetDestinationMapForCellTargeting(target.Tile, out var destinationMap))
         {
             StartChoosingMapLandingCell(target.Tile, destinationMap, pods);
             return true;
         }
+
+        if (pods.Any(pod => pod.HasTransportablePawns()) && !TryGetBeaconMaintainedDestinationMap(target.Tile, out _))
+            return ChooseClusterWorldTarget(target, originTile, pods);
 
         return TryBeginLaunchSequence(target.Tile, new CP_TransportersArrivalAction_ClusterDrop());
     }
@@ -998,8 +1073,16 @@ public class Building_ClusterProjectionConsole : Building
         launchDestinationTile = destinationTile;
         launchArrivalAction = arrivalAction ?? new CP_TransportersArrivalAction_ClusterDrop();
         launchCountdownTicksLeft = Mathf.Max(1, AssemblyProps.launchCountdownTicks);
+        launchCountdownInitialTicks = launchCountdownTicksLeft;
+        lastLaunchMoteSecondShown = 0;
         launchGroupID = Find.UniqueIDsManager.GetNextTransporterGroupID();
         var landingAnchor = GetClusterLandingAnchor(pods);
+        if (AssemblyProps.packWires)
+        {
+            for (var i = 0; i < pods.Count; i++)
+                pods[i].PreparePackedWiresForLaunch(landingAnchor);
+        }
+
         pendingPodLaunches = pods
             .Select(pod => new PendingPodLaunch
             {
@@ -1010,11 +1093,13 @@ public class Building_ClusterProjectionConsole : Building
             .ToList();
 
         Messages.Message("CP_LaunchCountdownStarted".Translate((launchCountdownTicksLeft / 60f).ToString("0.#"), pods.Count), this, MessageTypeDefOf.TaskCompletion, false);
+        TrySpawnLaunchMote();
         return true;
     }
 
     private void TickLaunch()
     {
+        TrySpawnLaunchMote();
         if (launchCountdownTicksLeft > 0)
         {
             launchCountdownTicksLeft--;
@@ -1046,8 +1131,50 @@ public class Building_ClusterProjectionConsole : Building
             launchDestinationTile = PlanetTile.Invalid;
             launchGroupID = -1;
             launchArrivalAction = null;
+            launchCountdownInitialTicks = 0;
+            lastLaunchMoteSecondShown = 0;
             Messages.Message("CP_LaunchStarted".Translate(), this, MessageTypeDefOf.TaskCompletion, false);
         }
+    }
+
+    private void TrySpawnAssemblyMote()
+    {
+        if (!Spawned || Map == null)
+            return;
+
+        if (!this.IsHashIntervalTick(55))
+            return;
+
+        MoteMaker.MakeStaticMote(DrawPos, Map, CP_ThingDefOf.CP_MoteAssembly, 4f);
+    }
+
+    private void TrySpawnLaunchMote()
+    {
+        if (!Spawned || Map == null || launchCountdownInitialTicks <= 0)
+            return;
+
+        var elapsedSecond = 1 + Mathf.FloorToInt((launchCountdownInitialTicks - launchCountdownTicksLeft) / 60f);
+        if (elapsedSecond <= 0 || elapsedSecond == lastLaunchMoteSecondShown)
+            return;
+
+        var moteDef = GetLaunchMoteForElapsedSecond(elapsedSecond);
+        if (moteDef == null)
+            return;
+
+        lastLaunchMoteSecondShown = elapsedSecond;
+        MoteMaker.MakeStaticMote(DrawPos, Map, moteDef, 4f);
+    }
+
+    private static ThingDef GetLaunchMoteForElapsedSecond(int elapsedSecond)
+    {
+        return elapsedSecond switch
+        {
+            1 => CP_ThingDefOf.CP_MoteCount3f,
+            2 => CP_ThingDefOf.CP_MoteCount2f,
+            3 => CP_ThingDefOf.CP_MoteCount1f,
+            >= 4 => CP_ThingDefOf.CP_MoteLaunch,
+            _ => null
+        };
     }
 
     private void LaunchPod(PendingPodLaunch pending)

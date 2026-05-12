@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<LanguageData>
+  
+  <!-- EN: auto assembly rail -->
+  <CP_AutoAssemblyRail.label>自动装配导轨</CP_AutoAssemblyRail.label>
+  <!-- EN: Axis-aligned rail used to define the launch rectangle with a console. -->
+  <CP_AutoAssemblyRail.description>自动装配导轨，连接集群投射工厂以允许装配头自由移动。无法弯曲建造。</CP_AutoAssemblyRail.description>
+  
+  <!-- EN: cluster pod -->
+  <CP_ClusterPod.label>集群发射舱</CP_ClusterPod.label>
+  <!-- EN: A sealed projected cluster pod containing an assembled building. -->
+  <CP_ClusterPod.description>待发射的集群的一部分</CP_ClusterPod.description>
+  
+  <!-- EN: cluster projection console -->
+  <CP_ClusterProjectionConsole.label>集群投射工厂</CP_ClusterProjectionConsole.label>
+  <!-- EN: Main controller for defining launch areas, staging encapsulation, and launching projected clusters. -->
+  <CP_ClusterProjectionConsole.description>一个集合大型弹道计算机，装配机床控制与发射调度为一体的综合工厂。其连接的两条垂直导轨间，铺设发射架的空间即为装配-发射区域。可装配发射区域中的建筑物，并作为一个集群发射至目的地。装配时需要消耗钢铁，发射时需要消耗化合燃油。</CP_ClusterProjectionConsole.description>
+  <!-- EN: CP_Steel -->
+  <CP_ClusterProjectionConsole.comps.CP_CompRefuelable-1.fuelGizmoLabel>钢铁</CP_ClusterProjectionConsole.comps.CP_CompRefuelable-1.fuelGizmoLabel>
+  <!-- EN: Steel -->
+  <CP_ClusterProjectionConsole.comps.CP_CompRefuelable-1.fuelLabel>钢铁</CP_ClusterProjectionConsole.comps.CP_CompRefuelable-1.fuelLabel>
+  
+  <!-- EN: infantry capsule -->
+  <CP_InfantryCapsule.label>步兵运输舱</CP_InfantryCapsule.label>
+  <!-- EN: A pawn-only transport capsule that uses vanilla-style mass-limited loading and unloading behavior. -->
+  <CP_InfantryCapsule.description>专门容纳人员的运输舱。可在集群中建造，以将战斗人员一并进行发射。</CP_InfantryCapsule.description>
+  
+  <!-- EN: oil expansion tank -->
+  <CP_OilExpansionTank.label>燃油扩展仓</CP_OilExpansionTank.label>
+  <!-- EN: Expands the linked cluster projection console's chemfuel capacity while connected within range. -->
+  <CP_OilExpansionTank.description>与集群工厂相连以提升其燃油流量。这通常可以允许更远的发射距离。</CP_OilExpansionTank.description>
+  
+  <!-- EN: projection beacon -->
+  <CP_ProjectionBeacon.label>投射导航信标</CP_ProjectionBeacon.label>
+  <!-- EN: A launchable projection beacon built beside a launcher like a transport pod. On landing it establishes temporary map presence, keeps the map visible for a limited time, and then self-destructs. -->
+  <CP_ProjectionBeacon.description>通过一般发射架进行发射，可在人员到达前先行探查目标地图的具体情况，以方便集群投射时的精确导航。</CP_ProjectionBeacon.description>
+  
+  <!-- EN: steel expansion tank -->
+  <CP_SteelExpansionTank.label>钢铁扩展仓</CP_SteelExpansionTank.label>
+  <!-- EN: Expands the linked cluster projection console's steel capacity while connected within range. -->
+  <CP_SteelExpansionTank.description>与集群工厂相连以提升其钢铁容量。这通常可以允许装配更大的集群。</CP_SteelExpansionTank.description>
+  
+</LanguageData>

@@ -7,15 +7,35 @@ namespace ClusterProjection;
 
 public class Building_ClusterPod : Building, IThingHolder
 {
+    private sealed class PackedWireRecord : IExposable
+    {
+        public ThingDef def;
+        public ThingDef stuffDef;
+        public Rot4 rotation = Rot4.North;
+        public IntVec3 sourcePosition = IntVec3.Invalid;
+        public IntVec3 deploymentOffset = IntVec3.Invalid;
+
+        public void ExposeData()
+        {
+            Scribe_Defs.Look(ref def, "def");
+            Scribe_Defs.Look(ref stuffDef, "stuffDef");
+            Scribe_Values.Look(ref rotation, "rotation", Rot4.North);
+            Scribe_Values.Look(ref sourcePosition, "sourcePosition", IntVec3.Invalid);
+            Scribe_Values.Look(ref deploymentOffset, "deploymentOffset", IntVec3.Invalid);
+        }
+    }
+
     private ThingOwner<Thing> innerContainer;
     private ThingOwner<Thing> emptyContainer; // Used by GetDirectlyHeldThings() to prevent auto-ticking
     private ThingOwner<Thing> cargoContainer; // Stores items that were on the building
+    private List<PackedWireRecord> packedWires;
     private Rot4 storedRotation;
     private IntVec3 landingOffset;
     private bool autoDeployOnSpawn;
     private int autoDeployTicksLeft;
 
     public Thing ContainedThing => innerContainer.Count > 0 ? innerContainer[0] : null;
+    public bool HasPackedWires => !packedWires.NullOrEmpty();
     public IntVec3 LandingOffset => landingOffset;
 
     public Building_ClusterPod()
@@ -23,10 +43,40 @@ public class Building_ClusterPod : Building, IThingHolder
         innerContainer = new ThingOwner<Thing>(this, oneStackOnly: true);
         emptyContainer = new ThingOwner<Thing>(this, oneStackOnly: false);
         cargoContainer = new ThingOwner<Thing>(this, oneStackOnly: false);
+        packedWires = new List<PackedWireRecord>();
         storedRotation = Rot4.North;
         landingOffset = IntVec3.Zero;
         autoDeployOnSpawn = false;
         autoDeployTicksLeft = -1;
+    }
+
+    public bool HasPackedWireAtSourcePosition(IntVec3 position)
+    {
+        return packedWires.Any(record => record.sourcePosition == position);
+    }
+
+    public void AddPackedWire(Building wire)
+    {
+        if (wire == null || wire.def.building?.isPowerConduit != true || HasPackedWireAtSourcePosition(wire.Position))
+            return;
+
+        packedWires.Add(new PackedWireRecord
+        {
+            def = wire.def,
+            stuffDef = wire.Stuff,
+            rotation = wire.Rotation,
+            sourcePosition = wire.Position,
+            deploymentOffset = IntVec3.Invalid
+        });
+    }
+
+    public void PreparePackedWiresForLaunch(IntVec3 clusterAnchor)
+    {
+        if (packedWires.NullOrEmpty())
+            return;
+
+        for (var i = 0; i < packedWires.Count; i++)
+            packedWires[i].deploymentOffset = packedWires[i].sourcePosition - clusterAnchor;
     }
 
     public void SetLandingOffset(IntVec3 offset)
@@ -71,10 +121,12 @@ public class Building_ClusterPod : Building, IThingHolder
             foreach (var heldThing in holder.GetDirectlyHeldThings())
                 ownedThings.Add(heldThing);
 
+            var preserveHeldEntities = thing is Building_HoldingPlatform;
+
             for (var i = 0; i < ownedThings.Count; i++)
             {
                 var item = ownedThings[i];
-                if (item.def.category == ThingCategory.Item)
+                if (item.def.category == ThingCategory.Item || (preserveHeldEntities && item is Pawn))
                 {
                     holder.GetDirectlyHeldThings().Remove(item);
                     cargoContainer.TryAdd(item);
@@ -170,7 +222,32 @@ public class Building_ClusterPod : Building, IThingHolder
             }
         }
 
+        DeployPackedWires(position, map);
+        packedWires.Clear();
+
         return true;
+    }
+
+    private void DeployPackedWires(IntVec3 position, Map map)
+    {
+        if (packedWires.NullOrEmpty() || map == null)
+            return;
+
+        var clusterAnchor = position - landingOffset;
+        for (var i = 0; i < packedWires.Count; i++)
+        {
+            var record = packedWires[i];
+            if (record.def?.building?.isPowerConduit != true)
+                continue;
+
+            var spawnCell = record.deploymentOffset.IsValid ? clusterAnchor + record.deploymentOffset : record.sourcePosition;
+            if (!spawnCell.IsValid || !spawnCell.InBounds(map))
+                continue;
+
+            var wire = ThingMaker.MakeThing(record.def, record.stuffDef);
+            wire.SetFaction(Faction);
+            GenSpawn.Spawn(wire, spawnCell, map, record.rotation, WipeMode.VanishOrMoveAside);
+        }
     }
 
     public override void SpawnSetup(Map map, bool respawningAfterLoad)
@@ -196,6 +273,7 @@ public class Building_ClusterPod : Building, IThingHolder
         base.ExposeData();
         Scribe_Deep.Look(ref innerContainer, "innerContainer", this);
         Scribe_Deep.Look(ref cargoContainer, "cargoContainer", this);
+        Scribe_Collections.Look(ref packedWires, "packedWires", LookMode.Deep);
         Scribe_Values.Look(ref storedRotation, "storedRotation", Rot4.North);
         Scribe_Values.Look(ref landingOffset, "landingOffset", IntVec3.Zero);
         Scribe_Values.Look(ref autoDeployOnSpawn, "autoDeployOnSpawn", false);
@@ -204,6 +282,7 @@ public class Building_ClusterPod : Building, IThingHolder
         {
             emptyContainer ??= new ThingOwner<Thing>(this, oneStackOnly: false);
             cargoContainer ??= new ThingOwner<Thing>(this, oneStackOnly: false);
+            packedWires ??= new List<PackedWireRecord>();
         }
     }
 
@@ -252,6 +331,13 @@ public class Building_ClusterPod : Building, IThingHolder
                 GenSpawn.Spawn(thing, previousPosition, previousMap, storedRotation);
             }
         }
+
+        if (previousMap != null && packedWires.Count > 0)
+        {
+            DeployPackedWires(previousPosition, previousMap);
+            packedWires.Clear();
+        }
+
         base.Destroy(mode);
     }
 }

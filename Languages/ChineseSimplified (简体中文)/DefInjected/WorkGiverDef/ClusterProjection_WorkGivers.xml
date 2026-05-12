@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<LanguageData>
+  
+  <!-- EN: refuel steel console stores -->
+  <CP_RefuelSteelConsole.label>为工厂补充钢铁</CP_RefuelSteelConsole.label>
+  <!-- EN: refueling -->
+  <CP_RefuelSteelConsole.gerund>为工厂补充燃油</CP_RefuelSteelConsole.gerund>
+  <!-- EN: refuel -->
+  <CP_RefuelSteelConsole.verb>补充燃油</CP_RefuelSteelConsole.verb>
+  
+</LanguageData>
